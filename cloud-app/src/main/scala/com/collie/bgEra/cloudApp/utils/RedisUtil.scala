@@ -1,6 +1,5 @@
 package com.collie.bgEra.cloudApp.utils
 
-import javax.annotation.Resource
 import org.springframework.beans.factory.annotation.{Autowired, Qualifier}
 import org.springframework.stereotype.Component
 import redis.clients.jedis.JedisCluster
@@ -8,8 +7,7 @@ import scala.collection.JavaConversions._
 
 @Component
 class RedisUtil {
-//  @Resource(name = "jedisCluster")
-  @Autowired(required = false)
+  @Autowired(required = true)
   @Qualifier("jedisCluster")
   private val jedis: JedisCluster = null
 
