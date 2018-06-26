@@ -45,9 +45,7 @@
         <module>consumer</module>
         <module>zuulRoute</module>
         <module>cloud-app</module>
-        <module>activitiWeb</module>
-        <module>activitiWeb</module>
-        <module>activitiWeb</module>
+        <module>wfWeb</module>
     </modules>
 
     <dependencyManagement>
@@ -151,6 +149,7 @@
             <version>${scala.version}</version>
         </dependency>
     </dependencies>
+
     <build>
         <plugins>
             <!-- Package as an executable jar -->
