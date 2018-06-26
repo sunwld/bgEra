@@ -1,0 +1,27 @@
+server:
+  port: 8080
+spring:
+  application:
+    name: service-hi
+  datasource:
+    druid:
+      driver-class-name: oracle.jdbc.OracleDriver
+      username: scifmation
+      password: kxht#123
+      url: jdbc:oracle:thin:@133.96.9.118:7521:orcl
+#  redis:
+#    cluster:
+#      nodes:
+#        - demo1:10001
+#        - demo1:10003
+#        - demo2:10001
+#        - demo2:10003
+#        - demo3:10001
+#        - demo3:10003
+#    password: 123456
+#    pool:
+#      min-idle: 2
+#      max-idle: 5
+#      max-active: 8
+#      max-wait: 2000
+
