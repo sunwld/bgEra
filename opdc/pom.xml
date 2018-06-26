@@ -45,17 +45,10 @@
       <artifactId>fastjson</artifactId>
     </dependency>
 
-    <!-- activiti -->
     <!--<dependency>
-      <groupId>org.activiti</groupId>
-      <artifactId>activiti-spring-boot-starter-basic</artifactId>
-    </dependency>-->
-
-
-    <dependency>
       <groupId>org.springframework.cloud</groupId>
       <artifactId>spring-cloud-starter-netflix-eureka-client</artifactId>
-    </dependency>
+    </dependency>-->
 
 
     <!-- 数据源相关 -->

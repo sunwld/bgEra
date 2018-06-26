@@ -163,7 +163,7 @@
                 <artifactId>scala-maven-plugin</artifactId>
                 <version>${scala-maven-plugin.version}</version>
                 <executions>
-                    <execution>
+                   <execution>
                         <id>scala-compile-first</id>
                         <phase>process-resources</phase>
                         <goals>
