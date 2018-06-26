@@ -8,3 +8,5 @@ spring:
     prefix:
     template-loader-path: classpath:/templates/
     suffix: .ftl
+    enabled: true
+
