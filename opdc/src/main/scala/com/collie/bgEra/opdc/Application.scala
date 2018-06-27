@@ -14,7 +14,7 @@ import org.springframework.web.servlet.view.freemarker.{FreeMarkerConfigurer, Fr
 //import org.springframework.cloud.netflix.eureka.EnableEurekaClient
 import org.springframework.context.annotation._
 
-@SpringBootApplication(scanBasePackages = Array("com.collie.bgEra"))
+@SpringBootApplication(scanBasePackages = Array("com.collie.bgEra.opdc"))
 //@EnableEurekaClient
 //@EnableDiscoveryClient
 class Config extends WebMvcConfigurationSupport{

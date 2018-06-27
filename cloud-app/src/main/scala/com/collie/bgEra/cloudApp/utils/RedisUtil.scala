@@ -7,7 +7,7 @@ import scala.collection.JavaConversions._
 
 @Component
 class RedisUtil {
-  @Autowired(required = true)
+  @Autowired(required = false)
   @Qualifier("jedisCluster")
   private val jedis: JedisCluster = null
 
