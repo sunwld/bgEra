@@ -19,7 +19,7 @@ import org.springframework.data.redis.core.RedisTemplate
 @RestController
 @RequestMapping(Array("/opdc"))
 class Ct {
-    private val logger: Logger = LoggerFactory.getLogger("abc")
+    private val logger: Logger = LoggerFactory.getLogger("appm")
 
 //    @Autowired
 //    var redisTemplate: RedisTemplate[_,_] = _

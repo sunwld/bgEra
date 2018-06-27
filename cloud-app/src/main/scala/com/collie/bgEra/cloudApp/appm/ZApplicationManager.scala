@@ -1,11 +1,9 @@
 package com.collie.bgEra.cloudApp.appm
 
-import java.text.SimpleDateFormat
 import java.util
-import java.util.Date
-
 import com.collie.bgEra.cloudApp.appm.watchers.{ClusterStatusWatcher, ClusterVersionWatcher, PreNodeWatcher, VoteNodeWatcher}
 import org.apache.zookeeper.{CreateMode, KeeperException}
+import org.slf4j.{Logger, LoggerFactory}
 
 import scala.collection.JavaConversions._
 import scala.collection.mutable
@@ -16,12 +14,13 @@ class ZApplicationManager private(
                                    val minLiveServCount: Int, val clusterInitServCount: Int,
                                    val appManagerStandardSkill: AppManagerStandardSkill) {
 
+
+  private val logger: Logger = LoggerFactory.getLogger("appm")
   private var zookeeperDriver: ZookeeperDriver.type = ZookeeperDriver
-  private var voterIDs: java.util.List[String] = _
   private val MAX_RETRY_TIMES_PER_MIN: Int = 5
   private val RETRY_INTERVAL_SECONDS: Int = 1
   private var retry_times = 0
-
+  val clusterInfo:ClusterInfo = ClusterInfo(null,null,minLiveServCount,false,projectName)
 
   val voteSplit = "_SEQ_"
   var projectPath = ""
@@ -29,7 +28,6 @@ class ZApplicationManager private(
   var votePath = ""
   var clusterStatusPath = ""
   var clusterVersionPath = ""
-  var voterId: String = _
   var voterPlace: (String, String) = _
   val MASTER = "MASTER"
   val SLAVE = "SLAVE"
@@ -44,9 +42,11 @@ class ZApplicationManager private(
       case ex: AppClusterFatalException => {
         var retryTimesTmp = retryTimes
         if (retryTimesTmp == 0) {
+          logger.error(s"recoverFromFatalError execute FAILED ! exceed max retry limit , will sleep 1 min.",ex)
           Thread.sleep(60000)
           retryTimesTmp = MAX_RETRY_TIMES_PER_MIN
         }
+        logger.error(s"recoverFromFatalError execute FAILED ! sleep $RETRY_INTERVAL_SECONDS S,retry.",ex)
         Thread.sleep(RETRY_INTERVAL_SECONDS * 1000)
         recoverFromFatalError(ex, retryTimesTmp - 1)
       }
@@ -56,16 +56,17 @@ class ZApplicationManager private(
   def rebalanceClusterByMaster(): Unit = {
     var voterIdCount = watchVoteNode().size()
     var clusterStatus = getClusterStatus()
-    val clusterInitServCount = ZApplicationManager().clusterInitServCount
-    val clusterMinServCount = ZApplicationManager().minLiveServCount
-    println(s"[${new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date())}]rebalanceClusterByMaster:cluster voters count:${voterIdCount}")
-    println(s"[${new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date())}]rebalanceClusterByMaster:cluster zk current status:${clusterStatus}")
-    println(s"clusterStatus : $clusterStatus")
+    val clusterInitServCount = this.clusterInitServCount
+    val clusterMinServCount = this.minLiveServCount
+    logger.info(s"rebalanceClusterByMaster:cluster voters count:${voterIdCount}")
+    logger.info(s"rebalanceClusterByMaster:cluster zk current status:${clusterStatus}")
+    logger.info(s"clusterStatus : $clusterStatus")
+
 
     if ("INACTIVE".equals(clusterStatus)) {
       //集群不可用时
       if (voterIdCount >= clusterMinServCount) {
-        println(s"[${new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date())}]rebalanceClusterByMaster:voterCount bigger than:${clusterMinServCount},active cluster,relocate task,incr version")
+        logger.info(s"rebalanceClusterByMaster:voterCount bigger than:${clusterMinServCount},active cluster,relocate task,incr version")
         //先做REALOOCATE任务，开始初始化集群，修改集群状态，广播事件 建立VOTERWATCHER、达到重新分配任务、开始运行任务目的
         appReallocation()
 
@@ -76,11 +77,11 @@ class ZApplicationManager private(
       //集群可用时
       if (voterIdCount < clusterMinServCount) {
         //修改集群状态，并通过修改集群状态为INACTIVE，广播事件，达到停止业务的目的
-        println(s"[${new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date())}]rebalanceClusterByMaster:voterCount less than:${clusterMinServCount},inactive cluster")
+        logger.info(s"rebalanceClusterByMaster:voterCount less than:${clusterMinServCount},inactive cluster")
         inAcvtiveCluster()
       } else {
         //先做REALOOCATE任务，修改集群版本号，通过版本号广播达到让应用重新加载任务
-        println(s"[${new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date())}]rebalanceClusterByMaster:voterCount bigger than:${clusterMinServCount},relocate task,incr version")
+        logger.info(s"rebalanceClusterByMaster:voterCount bigger than:${clusterMinServCount},relocate task,incr version")
         appReallocation()
         incrClusterVersion()
       }
@@ -88,20 +89,18 @@ class ZApplicationManager private(
   }
 
   def implementZManagement(): String = {
-    var voterId: String = ""
     try {
-      println(s"[${new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date())}]implementZManagement:conn zk,create vote,watchnode,watchstatus,watchcluster")
+      logger.info(s"implementZManagement:conn zk,create vote,watchnode,watchstatus,watchcluster")
       zookeeperDriver.connectZK(zkUrls)
-      voterId = createVoteZnode(projectName, "")
-      voterIDs = watchVoteNode()
+      this.clusterInfo.currentVotid = createVoteZnode(projectName, "")
+      watchVoteNode()
       watchStatusNode()
       watchClusterVersion()
 
-      voterId
+      this.clusterInfo.currentVotid
     } catch {
       case ex: AppClusterFatalException => {
-        println(s"[${new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date())}]ERROR!!!recoverFromFatalError:cluster reconstraction!")
-        ex.printStackTrace()
+        logger.error(s"ERROR!!!recoverFromFatalError:cluster reconstraction!",ex)
         recoverFromFatalError(ex)
       }
     }
@@ -128,30 +127,31 @@ class ZApplicationManager private(
     val currVoters: mutable.Buffer[String] =
       voters.filter(_.startsWith(s"${zookeeperDriver.getSessionId()}$voteSplit"))
     if (currVoters.size == 0) {
-      voterId = zookeeperDriver.createNode(
+      this.clusterInfo.currentVotid = zookeeperDriver.createNode(
         s"$votePath/${zookeeperDriver.getSessionId()}$voteSplit",
         voteNodeValue, CreateMode.EPHEMERAL_SEQUENTIAL)
-      println(voterId)
-      voterId = voterId.replace(s"$votePath/", "")
+      this.clusterInfo.currentVotid = this.clusterInfo.currentVotid.replace(s"$votePath/", "")
     }
     else {
-      voterId = currVoters(0)
+      this.clusterInfo.currentVotid = currVoters(0)
     }
-    voterId
+    this.clusterInfo.currentVotid
   }
 
 
   def getVoteResult(): (String, String) = {
-    val mySeq = voterId.split(voteSplit)(1)
+    val mySeq = this.clusterInfo.currentVotid.split(voteSplit)(1)
     val voters: util.List[String] = zookeeperDriver.getChildren(votePath)
     val sortedVoters = voters.sortBy(_.split(voteSplit)(1))
 
     if (mySeq == sortedVoters(0).split(voteSplit)(1)) {
       this.voterPlace = (MASTER, votePath)
+      clusterInfo.isMaster = true
 
     } else {
-      val prevVoter = sortedVoters(sortedVoters.indexOf(voterId) - 1)
+      val prevVoter = sortedVoters(sortedVoters.indexOf(this.clusterInfo.currentVotid) - 1)
       this.voterPlace = (SLAVE, votePath + "/" + prevVoter)
+      clusterInfo.isMaster = false
     }
     this.voterPlace
   }
@@ -159,24 +159,27 @@ class ZApplicationManager private(
   def watchVoteNode(): util.List[String] = {
     getVoteResult()
     if (voterPlace._1.equals(MASTER)) {
-      println(s"[${new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date())}]watchVoteNode:i am  master.place:$voterPlace")
-      zookeeperDriver.getChildrenAndWatch(votePath, VoteNodeWatcher)
+      logger.info(s"watchVoteNode:i am  master.place:$voterPlace")
+      this.clusterInfo.clusterVotids = zookeeperDriver.getChildrenAndWatch(votePath, VoteNodeWatcher)
+      this.clusterInfo.clusterVotids
     } else {
-      println(s"[${new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date())}]watchVoteNode:i am  salve.place:$voterPlace")
+      logger.info(s"watchVoteNode:i am  salve.place:$voterPlace")
       try {
         val res = zookeeperDriver.existsAndWatch(voterPlace._2, PreNodeWatcher)
         if (res == null) {
           watchVoteNode()
-          println(s"[${new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date())}]watchVoteNode:Warining:Prev Node is not exists, will getVoteResult() and retry!")
+          logger.info(s"watchVoteNode:Warining:Prev Node is not exists, will getVoteResult() and retry!")
         }
-        new util.ArrayList[String]()
+        this.clusterInfo.clusterVotids = new util.ArrayList[String]()
+        this.clusterInfo.clusterVotids
       }
       catch {
         case ex: KeeperException.NoNodeException => {
           Thread.sleep(100)
           watchVoteNode()
-          println(s"[${new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date())}]watchVoteNode:Exception:Prev Node is not exists, will getVoteResult() and retry!")
-          new util.ArrayList[String]()
+          logger.warn(s"watchVoteNode:Exception:Prev Node is not exists, will getVoteResult() and retry!")
+          this.clusterInfo.clusterVotids = new util.ArrayList[String]()
+          this.clusterInfo.clusterVotids
         }
       }
     }
@@ -219,7 +222,7 @@ class ZApplicationManager private(
   }
 
   def breakConnectionFromZk(): Unit = {
-    appManagerStandardSkill.suspend()
+    appManagerStandardSkill.suspend(clusterInfo)
     zookeeperDriver.close()
   }
 
@@ -227,7 +230,7 @@ class ZApplicationManager private(
     if (appStatus.equals("ACTIVE")) {
       appStatus = "INACTIVE"
       try {
-        appManagerStandardSkill.suspend()
+        appManagerStandardSkill.suspend(clusterInfo)
       } catch {
         case ex: Exception => throw new AppClusterFatalException()
       }
@@ -238,7 +241,7 @@ class ZApplicationManager private(
     if (appStatus.equals("INACTIVE")) {
       appStatus = "ACTIVE"
       try {
-        appManagerStandardSkill.resume()
+        appManagerStandardSkill.resume(clusterInfo)
       } catch {
         case ex: Exception => throw new AppClusterFatalException()
       }
@@ -247,7 +250,7 @@ class ZApplicationManager private(
 
   def appReconstruction() = {
     try {
-      appManagerStandardSkill.reconstruction()
+      appManagerStandardSkill.reconstruction(clusterInfo)
     } catch {
       case ex: Exception => throw new AppClusterFatalException()
     }
@@ -255,7 +258,7 @@ class ZApplicationManager private(
 
   def appReallocation() = {
     try {
-      appManagerStandardSkill.reallocation()
+      appManagerStandardSkill.reallocation(clusterInfo)
     } catch {
       case ex: Exception => throw new AppClusterFatalException()
     }
@@ -283,11 +286,4 @@ object ZApplicationManager {
     zApplicationManager
   }
 
-  def main(args: Array[String]): Unit = {
-    val zApplicationManager: ZApplicationManager = ZApplicationManager("MyProj", "192.168.186.100:2181,192.168.186.101:2181,192.168.186.102:2181",
-      2, 5, new AppManagerStandardSkillImpl())
-
-    zApplicationManager.implementZManagement()
-    Thread.sleep(Long.MaxValue)
-  }
 }

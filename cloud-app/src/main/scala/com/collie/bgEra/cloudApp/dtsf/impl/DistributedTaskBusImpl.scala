@@ -1,25 +1,12 @@
 package com.collie.bgEra.cloudApp.dtsf.impl
 
+import com.collie.bgEra.cloudApp.appm.ZApplicationManager
 import com.collie.bgEra.cloudApp.dtsf.DistributedTaskBus
 import javax.sql.DataSource
+import org.springframework.beans.factory.annotation.Autowired
+import org.springframework.stereotype.Component
 
+@Component("distributedTaskBus")
 class DistributedTaskBusImpl extends DistributedTaskBus {
-
-  private var currentInstanceId: Long = _
-
-  private var dtfsDataSource: DataSource = _
-
-  override def runBus(): Unit = {
-
-  }
-
-  override def suspend(): Unit = ???
-
-  override def resume(): Unit = ???
-
-  override def close(): Unit = ???
-
-  override def reconstruction(): Unit = ???
-
-  override def reallocation(): Unit = ???
+    override def runBus(): Unit = ???
 }

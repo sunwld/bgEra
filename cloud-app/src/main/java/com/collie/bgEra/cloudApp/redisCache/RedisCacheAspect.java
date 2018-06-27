@@ -1,6 +1,6 @@
-package com.collie.bgEra.cloudApp.annotation;
+package com.collie.bgEra.cloudApp.redisCache;
 
-import com.collie.bgEra.cloudApp.utils.RedisUtil;
+import com.collie.bgEra.cloudApp.redisCache.RedisService;
 import org.aspectj.lang.ProceedingJoinPoint;
 import org.aspectj.lang.annotation.*;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -11,7 +11,7 @@ import org.springframework.stereotype.Component;
 public class RedisCacheAspect {
 
   @Autowired
-  private RedisUtil redisUtil = null;
+  private RedisService redisUtil = null;
 
   @Pointcut("@annotation(rs)")
   public  void annotationPointCut(RedisObject rs) {}

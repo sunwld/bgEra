@@ -1,6 +1,4 @@
-package com.collie.bgEra.cloudApp.annotation;
-
-import org.springframework.core.annotation.AliasFor;
+package com.collie.bgEra.cloudApp.redisCache;
 
 import java.lang.annotation.*;
 

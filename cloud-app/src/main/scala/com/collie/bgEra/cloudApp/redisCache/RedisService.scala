@@ -1,18 +1,17 @@
-package com.collie.bgEra.cloudApp.utils
+package com.collie.bgEra.cloudApp.redisCache
 
+import com.collie.bgEra.cloudApp.utils.KryoUtil
 import org.springframework.beans.factory.annotation.{Autowired, Qualifier}
 import org.springframework.stereotype.Component
 import redis.clients.jedis.JedisCluster
-import scala.collection.JavaConversions._
 
 @Component
-class RedisUtil {
-  @Autowired(required = false)
+class RedisService {
+  @Autowired
   @Qualifier("jedisCluster")
   private val jedis: JedisCluster = null
 
-  @Autowired
-  private val kryoUtil: KryoUtil = null
+  private val kryoUtil: KryoUtil.type = KryoUtil
 
   /**
     * 从redis中获取数据

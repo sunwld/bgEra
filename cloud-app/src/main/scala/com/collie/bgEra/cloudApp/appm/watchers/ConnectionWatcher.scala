@@ -1,12 +1,11 @@
 package com.collie.bgEra.cloudApp.appm.watchers
 
-import java.text.SimpleDateFormat
-import java.util.Date
 import java.util.concurrent.CountDownLatch
 
 import com.collie.bgEra.cloudApp.appm.{ZApplicationManager, ZookeeperDriver}
 import org.apache.zookeeper.Watcher.Event.KeeperState
 import org.apache.zookeeper.{WatchedEvent, Watcher}
+import org.slf4j.{Logger, LoggerFactory}
 
 /**
   *
@@ -16,15 +15,17 @@ import org.apache.zookeeper.{WatchedEvent, Watcher}
   * */
 class ConnectionWatcher private () extends  Watcher{
   private var connectedSignal:CountDownLatch = _
+  private var logger: Logger = _
+
   override def process(event: WatchedEvent): Unit = {
-    println(s"[${new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date())}]ConnectionWatcher: watched event [$event]")
+    logger.info(s"ConnectionWatcher: watched event [$event]")
     if(event.getState == KeeperState.SyncConnected){
       connectedSignal.countDown()
     }else if( event.getState == KeeperState.Disconnected ||
             event.getState == KeeperState.Expired||
             event.getState == KeeperState.AuthFailed ){
 
-      println(s"[${new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date())}]ConnectionWatcher: connect is break!will reimplement cluster.")
+      logger.error(s"ConnectionWatcher: connect is break!will reimplement cluster.")
       ZApplicationManager().reImplementZManagement()
     }
   }
@@ -32,6 +33,7 @@ class ConnectionWatcher private () extends  Watcher{
 
 object ConnectionWatcher{
   private var connectionWatcher:ConnectionWatcher = new ConnectionWatcher()
+  connectionWatcher.logger = LoggerFactory.getLogger("appm")
 
   def apply(connectedSignal:CountDownLatch) = {
     connectionWatcher.connectedSignal = connectedSignal

@@ -1,7 +1,6 @@
 package com.collie.bgEra.cloudApp.utils
 
 import org.objenesis.strategy.StdInstantiatorStrategy
-import org.springframework.stereotype.Component
 import com.esotericsoftware.kryo.io.{Input, Output}
 import java.io.ByteArrayInputStream
 import java.io.ByteArrayOutputStream
@@ -10,8 +9,7 @@ import com.esotericsoftware.kryo.Kryo
 
 import org.apache.commons.codec.binary.Base64
 
-@Component
-class KryoUtil {
+object KryoUtil {
   private val DEFAULT_ENCODING = "UTF-8"
   //每个线程的 Kryo 实例//每个线程的 Kryo 实例
 
