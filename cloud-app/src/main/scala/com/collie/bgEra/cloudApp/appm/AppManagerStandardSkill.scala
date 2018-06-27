@@ -1,14 +1,15 @@
 package com.collie.bgEra.cloudApp.appm
 
 trait AppManagerStandardSkill {
-    def suspend()
 
-    def resume()
+  def suspend()
 
-    def close()
+  def resume()
 
-    def reconstruction()
+  def close()
 
-    def reallocation()
+  def reconstruction()
+
+  def reallocation()
 }
 

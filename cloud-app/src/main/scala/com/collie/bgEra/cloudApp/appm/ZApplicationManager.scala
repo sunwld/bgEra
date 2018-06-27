@@ -12,9 +12,9 @@ import scala.collection.mutable
 
 
 class ZApplicationManager private(
-                                         val projectName: String, val zkUrls: String,
-                                         val minLiveServCount: Int, val clusterInitServCount: Int,
-                                         val appManagerStandardSkill: AppManagerStandardSkill) {
+                                   val projectName: String, val zkUrls: String,
+                                   val minLiveServCount: Int, val clusterInitServCount: Int,
+                                   val appManagerStandardSkill: AppManagerStandardSkill) {
 
   private var zookeeperDriver: ZookeeperDriver.type = ZookeeperDriver
   private var voterIDs: java.util.List[String] = _
@@ -36,8 +36,7 @@ class ZApplicationManager private(
 
   private var appStatus = "INACTIVE"
 
-  def recoverFromFatalError(fatalException: AppClusterFatalException, retryTimes: Int = MAX_RETRY_TIMES_PER_MIN): Unit = {
-
+  def recoverFromFatalError(fatalException: AppClusterFatalException, retryTimes: Int = MAX_RETRY_TIMES_PER_MIN): String = {
     breakConnectionFromZk()
     try {
       implementZManagement()
@@ -88,15 +87,17 @@ class ZApplicationManager private(
     }
   }
 
-  def implementZManagement() = {
-
+  def implementZManagement(): String = {
+    var voterId: String = ""
     try {
       println(s"[${new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date())}]implementZManagement:conn zk,create vote,watchnode,watchstatus,watchcluster")
       zookeeperDriver.connectZK(zkUrls)
-      createVoteZnode(projectName, "")
+      voterId = createVoteZnode(projectName, "")
       voterIDs = watchVoteNode()
       watchStatusNode()
       watchClusterVersion()
+
+      voterId
     } catch {
       case ex: AppClusterFatalException => {
         println(s"[${new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date())}]ERROR!!!recoverFromFatalError:cluster reconstraction!")
