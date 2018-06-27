@@ -1,5 +1,7 @@
 package com.collie.bgEra.cloudApp.dtsf.bean
 
+import scala.beans.BeanProperty
+
 /**
   * 单个任务单元，是任务链中的一个部分。
   * 任务单元信息中存放了任务的名称，相关任务目标的名称
@@ -9,13 +11,13 @@ package com.collie.bgEra.cloudApp.dtsf.bean
   */
 class WorkUnitInfo {
 
-  var workUnitName: String = _
+  @BeanProperty var workUnitName: String = _
 
-  var targetId: String = _
+  @BeanProperty var targetId: String = _
 
-  var runOrder: Int = _
+  @BeanProperty var runOrder: Int = _
 
-  var resourceMap: Map[String, ResourceInfo] = _
+  @BeanProperty var resourceMap: Map[String, ResourceInfo] = _
 
-  var springBeanName: String = _
+  @BeanProperty var springBeanName: String = _
 }

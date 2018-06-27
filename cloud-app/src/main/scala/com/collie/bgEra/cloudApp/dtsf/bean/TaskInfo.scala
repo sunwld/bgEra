@@ -1,12 +1,16 @@
 package com.collie.bgEra.cloudApp.dtsf.bean
 
+import scala.beans.BeanProperty
+
 class TaskInfo {
 
-  var targetId: String = _
+  @BeanProperty var targetId: String = _
 
-  var taskSeq: Int = _
+  @BeanProperty var taskSeq: Int = _
 
-  var workUnitList: List[WorkUnitInfo] = _
+  @BeanProperty var workUnitList: List[WorkUnitInfo] = _
 
-  var taskSchedulerBean: String = _
+  @BeanProperty var taskSchedulerBean: String = _
+
+
 }

@@ -1,7 +1,9 @@
 package com.collie.bgEra.cloudApp.dtsf.bean
 
+import scala.beans.BeanProperty
+
 class ShardingInfo {
 
-  def targetList:List[String] = _
+  @BeanProperty var targetList:List[String] = _
 
 }
