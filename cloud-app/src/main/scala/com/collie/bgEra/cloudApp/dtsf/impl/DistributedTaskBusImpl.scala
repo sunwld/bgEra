@@ -1,9 +1,17 @@
 package com.collie.bgEra.cloudApp.dtsf.impl
 
 import com.collie.bgEra.cloudApp.dtsf.DistributedTaskBus
+import javax.sql.DataSource
 
 class DistributedTaskBusImpl extends DistributedTaskBus {
-  override def runBus(): Unit = ???
+
+  private var currentInstanceId: Long = _
+
+  private var dtfsDataSource: DataSource = _
+
+  override def runBus(): Unit = {
+
+  }
 
   override def suspend(): Unit = ???
 
