@@ -5,6 +5,9 @@ import org.springframework.beans.factory.annotation.{Autowired, Qualifier}
 import org.springframework.stereotype.Component
 import redis.clients.jedis.JedisCluster
 
+/**
+  *
+  */
 @Component
 class RedisService {
   @Autowired
@@ -33,6 +36,13 @@ class RedisService {
     }
   }
 
+  /**
+    *
+    * @param key
+    * @param value
+    * @param expireTime
+    * @return
+    */
   def setObject(key: Array[Byte], value: Array[Byte], expireTime: Long): String ={
     if(expireTime <= 0){
       jedis.set(key,value)
@@ -46,20 +56,42 @@ class RedisService {
     }
   }
 
+  /**
+    *
+    * @param key
+    * @param value
+    * @param expireTime
+    * @return
+    */
   def setObject(key: Any, value: Any, expireTime: Long): String ={
     val k = kryoUtil.writeClassAndObjectToByteArray(key)
     val v = kryoUtil.writeClassAndObjectToByteArray(value)
     setObject(k,v,expireTime)
   }
 
+  /**
+    *
+    * @param key
+    * @return
+    */
   def del(key: String) = {
     jedis.del(key)
   }
 
+  /**
+    *
+    * @param key
+    * @return
+    */
   def incr(key: String) = {
     jedis.incr(key)
   }
 
+  /**
+    *
+    * @param key
+    * @return
+    */
   def hasKey(key: String) = {
     jedis.exists(key)
   }
