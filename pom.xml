@@ -36,6 +36,7 @@
         <mybatis-spring.version>1.3.2</mybatis-spring.version>
         <spring-data-commons.version>1.13.12.RELEASE</spring-data-commons.version>
         <spring-orm.version>4.3.17.RELEASE</spring-orm.version>
+        <quartz.version>2.3.0</quartz.version>
     </properties>
 
     <groupId>collie</groupId>
@@ -136,18 +137,24 @@
             </dependency>
             <!-- zookeeper end-->
 
+            <!--quartz start-->
+            <dependency>
+                <groupId>org.quartz-scheduler</groupId>
+                <artifactId>quartz</artifactId>
+                <version>${quartz.version}</version>
+            </dependency>
+            <!--quartz end-->
+
             <dependency>
                 <groupId>org.springframework</groupId>
                 <artifactId>spring-context</artifactId>
                 <version>${spring.context.version}</version>
             </dependency>
-
             <dependency>
                 <groupId>org.springframework</groupId>
                 <artifactId>spring-aop</artifactId>
                 <version>${spring.context.version}</version>
             </dependency>
-
             <dependency>
                 <groupId>redis.clients</groupId>
                 <artifactId>jedis</artifactId>
