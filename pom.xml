@@ -157,6 +157,18 @@
                 <version>${commons-text.version}</version>
             </dependency>
 
+            <!-- local jars -->
+            <dependency>
+                <groupId>collie</groupId>
+                <artifactId>commons</artifactId>
+                <version>1.0.0</version>
+            </dependency>
+            <dependency>
+                <groupId>collie</groupId>
+                <artifactId>cloud-app</artifactId>
+                <version>1.0.0</version>
+            </dependency>
+
         </dependencies>
     </dependencyManagement>
 

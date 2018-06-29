@@ -59,6 +59,11 @@
       <artifactId>quartz</artifactId>
     </dependency>
 
+    <dependency>
+      <groupId>collie</groupId>
+      <artifactId>commons</artifactId>
+    </dependency>
+
   </dependencies>
 
   <build>
