@@ -3,10 +3,8 @@ package com.collie.bgEra.opdc
 import com.collie.bgEra.opdcConf.ConfToDtsf
 import org.springframework.boot.SpringApplication
 import org.springframework.boot.autoconfigure.SpringBootApplication
-import org.springframework.boot.context.TypeExcludeFilter
 import org.springframework.web.servlet.config.annotation._
 import org.springframework.context.annotation._
-import org.springframework.context.annotation.ComponentScan.Filter
 
 //@EnableEurekaClient
 //@EnableDiscoveryClient

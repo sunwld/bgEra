@@ -1,29 +1,33 @@
 package com.collie.bgEra.opdc
 
 import java.sql.{PreparedStatement, ResultSet}
-import java.util.Properties
+import java.util.{Date, Properties}
+
 import com.alibaba.druid.pool.DruidDataSource
 import org.slf4j.{Logger, LoggerFactory}
 import org.springframework.web.bind.annotation.ResponseBody
 import javax.sql.DataSource
 import org.springframework.web.bind.annotation.{RequestMapping, RestController}
 import org.springframework.beans.factory.annotation.Autowired
+import org.springframework.scheduling.quartz.{MethodInvokingJobDetailFactoryBean, SchedulerFactoryBean}
 
 @RestController
 @RequestMapping(Array("/opdc"))
 class Ct {
+    implicit def ds2DruidDS(ds:DataSource) = ds.asInstanceOf[DruidDataSource]
     private val logger: Logger = LoggerFactory.getLogger("opdc")
 
     @Autowired
     val service : TestService = null
-    implicit def ds2DruidDS(ds:DataSource) = ds.asInstanceOf[DruidDataSource]
+
+    @Autowired
+    val bean: MethodInvokingJobDetailFactoryBean = null
 
       /**
       * 孙文龙
       * @return
       */
     @RequestMapping(Array("/users"))
-    @ResponseBody
     def getUsers: Any = {
         logger.info("dddddd")
         val connPros = new Properties()
@@ -47,6 +51,11 @@ class Ct {
         conn.close()
         statement.close()
         dataSource.close()
+        "success"
+    }
+
+    @RequestMapping(Array("/q"))
+    def scheduler: Any = {
         "success"
     }
 }
