@@ -18,7 +18,6 @@ public class RedisCacheAspect {
 
   @Around(value = "annotationPointCut(rs))")
   public Object redisCacheCommon(ProceedingJoinPoint pjp,RedisObject rs) throws Throwable {
-
     try {
       Object[] args = pjp.getArgs();
       Object key = args[0];
@@ -31,6 +30,7 @@ public class RedisCacheAspect {
       //如果redis中不存在该数据，则从方法中获取，并缓存到redis中
       if(result == null){
         result = pjp.proceed();
+        System.out.println(rs.expireTime());
         redisUtil.setObject(key, result, rs.expireTime());
       }
       return result;

@@ -4,7 +4,7 @@ import java.util.Properties
 
 import com.alibaba.druid.pool.DruidDataSource
 import com.collie.bgEra.cloudApp.appm.conf.AppmConf
-import com.collie.bgEra.cloudApp.dtsf.MainJob
+import com.collie.bgEra.cloudApp.dtsf.{DistributedTaskBus}
 import com.collie.bgEra.cloudApp.redisCache.conf.RedisCacheConf
 import org.mybatis.spring.SqlSessionFactoryBean
 import org.mybatis.spring.annotation.MapperScan
@@ -14,6 +14,7 @@ import org.springframework.core.io.support.PathMatchingResourcePatternResolver
 import org.springframework.scheduling.quartz.{CronTriggerFactoryBean, MethodInvokingJobDetailFactoryBean, SchedulerFactoryBean}
 import org.springframework.beans.factory.config.PropertiesFactoryBean
 import org.springframework.core.io.ClassPathResource
+import redis.clients.jedis.JedisCluster
 
 /**
   * Dtsf组件实现分布式任务调度，
@@ -36,14 +37,13 @@ import org.springframework.core.io.ClassPathResource
 @Configuration
 @Import(Array(classOf[AppmConf],classOf[RedisCacheConf]))
 @ComponentScan(Array("com.collie.bgEra.cloudApp.dtsf"))
-@MapperScan(basePackages = Array("com.collie.bgEra.cloudApp.dtsf.mapper"))
 class DtsfConf {
 
   @Autowired
   @Qualifier("dtfsDataSource")
   val dtfsDataSource: DruidDataSource = null
 
-  @Bean
+  @Bean(Array("mainSqlSessionFactory"))
   def sqlSeesionFatory(): SqlSessionFactoryBean = {
     val sqlSessionFactoryBean = new SqlSessionFactoryBean
     sqlSessionFactoryBean.setDataSource(dtfsDataSource)
@@ -54,13 +54,13 @@ class DtsfConf {
 
 
   @Bean(name = Array("mainJobDetail"))
-  def jobDetail(@Qualifier("mainJob") mainJob: MainJob): MethodInvokingJobDetailFactoryBean = {
+  def jobDetail(@Qualifier("distributedTaskBus") bus: DistributedTaskBus): MethodInvokingJobDetailFactoryBean = {
     val jobDetailFactoryBean: MethodInvokingJobDetailFactoryBean = new MethodInvokingJobDetailFactoryBean()
     jobDetailFactoryBean.setConcurrent(false)
     jobDetailFactoryBean.setName("mainJobDetail")
     jobDetailFactoryBean.setGroup("mainGroup")
-    jobDetailFactoryBean.setTargetObject(mainJob)
-    jobDetailFactoryBean.setTargetMethod("execu")
+    jobDetailFactoryBean.setTargetObject(bus)
+    jobDetailFactoryBean.setTargetMethod("runBus")
     jobDetailFactoryBean
   }
   @Bean(name = Array("mainTrigger"))
@@ -85,4 +85,5 @@ class DtsfConf {
     scheduler.setQuartzProperties(propertiesFactoryBean.getObject())
     scheduler
   }
+
 }
