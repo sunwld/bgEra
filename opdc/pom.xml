@@ -53,10 +53,6 @@
 
     <!-- 数据源相关 -->
     <dependency>
-      <groupId>org.springframework.boot</groupId>
-      <artifactId>spring-boot-starter-jdbc</artifactId>
-    </dependency>
-    <dependency>
       <groupId>com.alibaba</groupId>
       <artifactId>druid-spring-boot-starter</artifactId>
     </dependency>
@@ -98,6 +94,19 @@
       </exclusions>
     </dependency>
 
+    <dependency>
+      <groupId>collie</groupId>
+      <artifactId>cloud-app</artifactId>
+      <version>1.0.0</version>
+    </dependency>
   </dependencies>
-
+  <build>
+    <plugins>
+      <!-- Package as an executable jar -->
+      <plugin>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-maven-plugin</artifactId>
+      </plugin>
+    </plugins>
+  </build>
 </project>

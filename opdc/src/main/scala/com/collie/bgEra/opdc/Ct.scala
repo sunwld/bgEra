@@ -2,27 +2,17 @@ package com.collie.bgEra.opdc
 
 import java.sql.{PreparedStatement, ResultSet}
 import java.util.Properties
-
 import com.alibaba.druid.pool.DruidDataSource
 import org.slf4j.{Logger, LoggerFactory}
-import org.springframework.beans.factory.annotation.Qualifier
-import org.springframework.stereotype.Controller
 import org.springframework.web.bind.annotation.ResponseBody
-import redis.clients.jedis.{HostAndPort, JedisCluster, JedisPoolConfig}
-//import com.collie.bgEra.commons.appm.ZApplicationManager
 import javax.sql.DataSource
 import org.springframework.web.bind.annotation.{RequestMapping, RestController}
 import org.springframework.beans.factory.annotation.Autowired
-import org.springframework.beans.factory.annotation.Autowired
-import org.springframework.data.redis.core.RedisTemplate
 
 @RestController
 @RequestMapping(Array("/opdc"))
 class Ct {
-    private val logger: Logger = LoggerFactory.getLogger("appm")
-
-//    @Autowired
-//    var redisTemplate: RedisTemplate[_,_] = _
+    private val logger: Logger = LoggerFactory.getLogger("opdc")
 
     @Autowired
     val service : TestService = null

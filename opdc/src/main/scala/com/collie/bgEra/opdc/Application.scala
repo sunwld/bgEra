@@ -1,28 +1,23 @@
 package com.collie.bgEra.opdc
 
-import com.alibaba.druid.pool.DruidDataSource
-import javax.sql.DataSource
+import com.collie.bgEra.opdcConf.ConfToDtsf
 import org.springframework.boot.SpringApplication
-import org.springframework.boot.autoconfigure.{EnableAutoConfiguration, SpringBootApplication}
-import org.springframework.boot.autoconfigure.jdbc.DataSourceBuilder
-import org.springframework.boot.context.properties.ConfigurationProperties
-import org.springframework.web.servlet.{View, ViewResolver}
+import org.springframework.boot.autoconfigure.SpringBootApplication
+import org.springframework.boot.context.TypeExcludeFilter
 import org.springframework.web.servlet.config.annotation._
-import org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerAdapter
-import org.springframework.web.servlet.view.freemarker.{FreeMarkerConfigurer, FreeMarkerViewResolver}
-//import org.springframework.cloud.client.discovery.EnableDiscoveryClient
-//import org.springframework.cloud.netflix.eureka.EnableEurekaClient
 import org.springframework.context.annotation._
+import org.springframework.context.annotation.ComponentScan.Filter
 
-@SpringBootApplication(scanBasePackages = Array("com.collie.bgEra.opdc"))
 //@EnableEurekaClient
 //@EnableDiscoveryClient
+@Import(Array(classOf[ConfToDtsf]))
+@SpringBootApplication(scanBasePackages = Array("com.collie.bgEra.opdc"))
 class Config extends WebMvcConfigurationSupport{
-    @Bean(name = Array("dataSource"))
-    @ConfigurationProperties(prefix = "spring.datasource.druid")
-    def dataSource : DataSource = {
-        DataSourceBuilder.create().`type`(classOf[DruidDataSource]).build()
-    }
+//    @Bean(name = Array("dataSource"))
+//    @ConfigurationProperties(prefix = "spring.datasource.druid")
+//    def dataSource : DataSource = {
+//        DataSourceBuilder.create().`type`(classOf[DruidDataSource]).build()
+//    }
 
     override def addViewControllers(registry: ViewControllerRegistry): Unit = {
         registry.addViewController("/home").setViewName("opdcHome")
@@ -58,6 +53,8 @@ class Config extends WebMvcConfigurationSupport{
 //        configuration.setDefaultEncoding("UTF-8")
 //        freemarkerConfig
 //    }
+
+
 }
 
 object Application extends App{
