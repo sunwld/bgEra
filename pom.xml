@@ -25,6 +25,8 @@
         <zk.version>3.4.12</zk.version>
         <kryo-shaded.version>4.0.2</kryo-shaded.version>
         <quartz.version>2.3.0</quartz.version>
+        <commons-lang3.version>3.7</commons-lang3.version>
+        <commons-text.version>1.4</commons-text.version>
         <commons-codec.version.version>1.10</commons-codec.version.version>
 
         <spring-cloud.version>Edgware.SR3</spring-cloud.version>
@@ -144,6 +146,17 @@
                 <artifactId>commons-codec</artifactId>
                 <version>${commons-codec.version}</version>
             </dependency>
+            <dependency>
+                <groupId>org.apache.commons</groupId>
+                <artifactId>commons-lang3</artifactId>
+                <version>${commons-lang3.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.commons</groupId>
+                <artifactId>commons-text</artifactId>
+                <version>${commons-text.version}</version>
+            </dependency>
+
         </dependencies>
     </dependencyManagement>
 

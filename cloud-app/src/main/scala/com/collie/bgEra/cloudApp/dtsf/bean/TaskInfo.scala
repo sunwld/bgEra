@@ -13,5 +13,4 @@ class TaskInfo {
 
   @BeanProperty var taskThreadPoolName: String = _
 
-
 }

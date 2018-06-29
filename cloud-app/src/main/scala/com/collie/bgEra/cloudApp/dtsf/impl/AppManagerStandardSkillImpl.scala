@@ -1,10 +1,13 @@
 package com.collie.bgEra.cloudApp.dtsf.impl
 
 import com.collie.bgEra.cloudApp.appm.{AppManagerStandardSkill, ClusterInfo}
+import org.slf4j.{Logger, LoggerFactory}
 import org.springframework.stereotype.Component
 
 @Component("appManagerStandardSkill")
 class AppManagerStandardSkillImpl extends AppManagerStandardSkill {
+  private val logger: Logger = LoggerFactory.getLogger("dtsf")
+
   override def suspend(clusterInfo: ClusterInfo): Unit = {
     println(s"suspend $clusterInfo")
   }
