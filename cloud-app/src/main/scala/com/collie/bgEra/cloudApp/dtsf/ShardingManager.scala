@@ -14,5 +14,5 @@ trait ShardingManager {
 
   def reShardTargetsAfterLeaver(): Unit
 
-  def reshardTargets(zkSessionIds: List[String], dtsfTargList: List[TargetInfo]): mutable.HashMap[String,List[TargetInfo]]
+  def reshardTargets(zkSessionIds: List[String], dtsfTargList: mutable.Seq[TargetInfo]): mutable.HashMap[String,mutable.Seq[TargetInfo]]
 }

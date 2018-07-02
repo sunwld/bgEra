@@ -13,6 +13,6 @@ public @interface RedisObject {
   int expireTime() default 60;
 
   @AliasFor("expireTime")
-  int value() default 0;
+  int value() default 60;
 
 }

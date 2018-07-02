@@ -5,6 +5,7 @@ import com.collie.bgEra.cloudApp.dtsf.bean.{ShardingInfo, TargetInfo}
 import org.springframework.stereotype.Component
 
 import scala.collection.mutable
+import scala.collection.mutable.ListBuffer
 
 @Component
 class ShardingManagerImpl extends ShardingManager{
@@ -16,14 +17,15 @@ class ShardingManagerImpl extends ShardingManager{
 
   override def reShardTargetsAfterLeaver(): Unit = ???
 
-  override def reshardTargets(zkSessionIds: List[String], dtsfTargList: List[TargetInfo]) = {
+  override def reshardTargets(zkSessionIds: List[String], dtsfTargList: mutable.Seq[TargetInfo]) = {
     val nodeCount = zkSessionIds.size
-    val shardMap = new mutable.HashMap[String,List[TargetInfo]]()
+    val shardMap = new mutable.HashMap[String,mutable.Seq[TargetInfo]]()
     var index: Int = -1
+    var list : Seq[TargetInfo] = null
     dtsfTargList.foreach(targetInfo => {
       index = targetInfo.shardingValue % nodeCount
-      val list: List[TargetInfo] = shardMap.getOrElse(zkSessionIds(index), List[TargetInfo]())
-      list :+ targetInfo
+      list = shardMap.getOrElseUpdate(zkSessionIds(index),ListBuffer[TargetInfo]())
+      list.asInstanceOf[ListBuffer[TargetInfo]].append(targetInfo)
     })
     shardMap
   }

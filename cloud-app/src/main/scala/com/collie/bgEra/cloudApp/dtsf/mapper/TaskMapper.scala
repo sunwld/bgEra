@@ -16,10 +16,9 @@ class TaskMapper {
 
   private val NAMESPACE:String = "base.dtsfTest.mapper.DtsfMapper"
 
-  @RedisObject(-1)
+  @RedisObject(expireTime = -1)
   def qryAllTartInfo(redisKey: String) = {
     val sql = NAMESPACE+".qryAllTartInfo"
-    println(sql)
     var session: SqlSession = null
     try{
       session = factory.openSession(false)
