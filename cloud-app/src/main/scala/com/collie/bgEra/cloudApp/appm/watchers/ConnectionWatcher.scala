@@ -3,6 +3,7 @@ package com.collie.bgEra.cloudApp.appm.watchers
 import java.util.concurrent.CountDownLatch
 
 import com.collie.bgEra.cloudApp.appm.{ZApplicationManager, ZookeeperDriver}
+import com.collie.bgEra.cloudApp.utils.ContextHolder
 import org.apache.zookeeper.Watcher.Event.KeeperState
 import org.apache.zookeeper.{WatchedEvent, Watcher}
 import org.slf4j.{Logger, LoggerFactory}
@@ -26,7 +27,7 @@ class ConnectionWatcher private () extends  Watcher{
             event.getState == KeeperState.AuthFailed ){
 
       logger.error(s"ConnectionWatcher: connect is break!will reimplement cluster.")
-      ZApplicationManager().reImplementZManagement()
+      ContextHolder.getBean(classOf[ZookeeperDriver]).connectZK()
     }
   }
 }

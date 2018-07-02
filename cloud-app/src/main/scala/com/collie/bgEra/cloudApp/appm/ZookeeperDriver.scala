@@ -4,13 +4,16 @@ import java.util
 import java.util.concurrent.CountDownLatch
 
 import com.collie.bgEra.cloudApp.appm.watchers.ConnectionWatcher
+import com.collie.bgEra.cloudApp.utils.ContextHolder
 import org.apache.zookeeper.ZooDefs.Ids
 import org.apache.zookeeper._
 import org.apache.zookeeper.data.Stat
 
-object ZookeeperDriver {
+class ZookeeperDriver {
+
   //    def apply: ZookeeperDriver = new ZookeeperDriver()
   private var zk: ZooKeeper = _
+  var zkUrl : String = _
 
   var connectedSignal: CountDownLatch = _
   val SESSION_TIMEOUT = 5000
@@ -194,6 +197,7 @@ object ZookeeperDriver {
   }
 
   def connectZK(zkUrl: String): Unit = {
+    this.zkUrl = zkUrl
     if (zk == null || !zk.getState.isConnected) {
       this.synchronized {
         if (zk == null || !zk.getState.isConnected) {
@@ -203,6 +207,9 @@ object ZookeeperDriver {
         }
       }
     }
+  }
+  def connectZK(): Unit = {
+    connectZK(this.zkUrl)
   }
 
   def close() = {

@@ -1,7 +1,7 @@
 package com.collie.bgEra.cloudApp.appm.conf
 
-import com.collie.bgEra.cloudApp.appm.{AppManagerStandardSkill, ZApplicationManager}
-import org.springframework.beans.factory.annotation.{Autowired, Qualifier}
+import com.collie.bgEra.cloudApp.appm.{AppManagerStandardSkill, ZApplicationManager, ZookeeperDriver}
+import org.springframework.beans.factory.annotation.{Autowired, Qualifier, Value}
 import org.springframework.context.annotation.{Bean, ComponentScan, Configuration}
 
 /**
@@ -15,20 +15,29 @@ import org.springframework.context.annotation.{Bean, ComponentScan, Configuratio
   * 并且将AppManagerStandardSkill的实现类注册到SPRING中
   */
 @Configuration
-@ComponentScan(Array("com.collie.bgEra.cloudApp.appm"))
+@ComponentScan(Array("com.collie.bgEra.cloudApp.appm","com.collie.bgEra.cloudApp.utils"))
 class AppmConf {
-  @Autowired
-  @Qualifier("appManagerStandardSkill")
-  val appManagerStandardSkill: AppManagerStandardSkill = null
+//  @Autowired
+//  @Qualifier("appManagerStandardSkill")
+//  val appManagerStandardSkill: AppManagerStandardSkill = null
+//
+//  @Autowired
+//  val appmContext: AppmContext = null
 
-  @Autowired
-  val appmContext: AppmContext = null
+//  @Bean(Array("zappm"))
+//  def getZApplicationManager(): ZApplicationManager = {
+//    val zappm = ZApplicationManager(appmContext.projectName, appmContext.minLiveServCount,
+//      appmContext.clusterInitServCount, appManagerStandardSkill)
+//    zappm.implementZManagement()
+//    zappm
+//  }
 
-  @Bean(Array("zappm"))
-  def getZApplicationManager(): ZApplicationManager = {
-    val zappm = ZApplicationManager(appmContext.projectName, appmContext.zkUrls, appmContext.minLiveServCount,
-      appmContext.clusterInitServCount, appManagerStandardSkill)
-    zappm.implementZManagement()
-    zappm
+  @Bean(name = Array("zkDriver"))
+  def getZkDriver(@Qualifier("zkUrl") zkUrl: String): ZookeeperDriver = {
+    println("getzkDriver")
+    val driver: ZookeeperDriver = new ZookeeperDriver()
+    driver.connectZK(zkUrl)
+    driver
   }
+
 }

@@ -26,6 +26,8 @@ class Config extends WebMvcConfigurationSupport{
     }
 
 
+
+
 //    @Bean
 //    def freeMarkerViewResolver(): FreeMarkerViewResolver = {
 //        val viewResolver = new FreeMarkerViewResolver()

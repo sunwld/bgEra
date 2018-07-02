@@ -11,3 +11,5 @@ spring:
     enabled: true
 #    settings:
 #      template_update_delay: 0
+appm:
+  zkUrl: 133.96.6.1:2181,133.96.6.2:2181,133.96.6.3:2181
