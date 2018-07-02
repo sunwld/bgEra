@@ -1,4 +1,5 @@
 package com.collie.bgEra.cloudApp.appm
 
-class AppClusterFatalException extends Exception{
+class AppClusterFatalException(message: String) extends Exception(message: String) {
+
 }

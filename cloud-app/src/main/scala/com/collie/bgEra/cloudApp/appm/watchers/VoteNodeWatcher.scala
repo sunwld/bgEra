@@ -10,21 +10,21 @@ object VoteNodeWatcher extends Watcher{
 
   override def process(event: WatchedEvent): Unit = {
     logger.info(s"PreNodeWatcher: watched event [$event]")
-//    this.synchronized{
-//
-//      if(event.getType == EventType.NodeChildrenChanged) {
-//        Thread.sleep(5000)
-//
-//        logger.warn(s"PreNodeWatcher: my slave have changed!i will rebalance cluster.")
-//        try {
-//          ZApplicationManager().rebalanceClusterByMaster()
-//        } catch {
-//          case ex: AppClusterFatalException => {
-//            logger.error(s"ERROR!!!recoverFromFatalError:cluster reconstraction!",ex)
-//            ZApplicationManager().recoverFromFatalError(ex)
-//          }
-//        }
-//      }
-//    }
+    this.synchronized{
+
+      if(event.getType == EventType.NodeChildrenChanged) {
+        Thread.sleep(5000)
+
+        logger.warn(s"PreNodeWatcher: my slave have changed!i will rebalance cluster.")
+        try {
+          ZApplicationManager().rebalanceClusterByMaster()
+        } catch {
+          case ex: AppClusterFatalException => {
+            logger.error(s"ERROR!!!recoverFromFatalError:cluster reconstraction!",ex)
+            ZApplicationManager().recoverFromFatalError(ex)
+          }
+        }
+      }
+    }
   }
 }

@@ -1,6 +1,6 @@
 package com.collie.bgEra.cloudApp.appm.conf
 
-import com.collie.bgEra.cloudApp.appm.{AppManagerStandardSkill, ZApplicationManager, ZookeeperDriver}
+import com.collie.bgEra.cloudApp.appm.{AppManagerStandardSkill, DistributedServiceLatchArbitrator, ZApplicationManager, ZookeeperDriver}
 import org.springframework.beans.factory.annotation.{Autowired, Qualifier, Value}
 import org.springframework.context.annotation.{Bean, ComponentScan, Configuration}
 
@@ -15,22 +15,22 @@ import org.springframework.context.annotation.{Bean, ComponentScan, Configuratio
   * 并且将AppManagerStandardSkill的实现类注册到SPRING中
   */
 @Configuration
-@ComponentScan(Array("com.collie.bgEra.cloudApp.appm","com.collie.bgEra.cloudApp.utils"))
+@ComponentScan(Array("com.collie.bgEra.cloudApp.appm", "com.collie.bgEra.cloudApp.utils"))
 class AppmConf {
-//  @Autowired
-//  @Qualifier("appManagerStandardSkill")
-//  val appManagerStandardSkill: AppManagerStandardSkill = null
-//
-//  @Autowired
-//  val appmContext: AppmContext = null
+  @Autowired
+  @Qualifier("appManagerStandardSkill")
+  val appManagerStandardSkill: AppManagerStandardSkill = null
 
-//  @Bean(Array("zappm"))
-//  def getZApplicationManager(): ZApplicationManager = {
-//    val zappm = ZApplicationManager(appmContext.projectName, appmContext.minLiveServCount,
-//      appmContext.clusterInitServCount, appManagerStandardSkill)
-//    zappm.implementZManagement()
-//    zappm
-//  }
+  @Autowired
+  val appmContext: AppmContext = null
+
+  //  @Bean(Array("zappm"))
+  //  def getZApplicationManager(): ZApplicationManager = {
+  //    val zappm = ZApplicationManager(appmContext.projectName, appmContext.minLiveServCount,
+  //      appmContext.clusterInitServCount, appManagerStandardSkill)
+  //    zappm.implementZManagement()
+  //    zappm
+  //  }
 
   @Bean(name = Array("zkDriver"))
   def getZkDriver(@Qualifier("zkUrl") zkUrl: String): ZookeeperDriver = {
@@ -38,6 +38,19 @@ class AppmConf {
     val driver: ZookeeperDriver = new ZookeeperDriver()
     driver.connectZK(zkUrl)
     driver
+  }
+
+  @Bean(name = Array("zApplicationManager"))
+  def getZApplicationManager(): ZApplicationManager = {
+    ZApplicationManager(appmContext.projectName, appmContext.minLiveServCount,
+      appmContext.clusterInitServCount, appManagerStandardSkill).implementZManagement()
+    ZApplicationManager()
+  }
+
+  @Bean(name = Array("distributedServiceLatchArbitrator"))
+  def getDistributedServiceLatchArbitrator: DistributedServiceLatchArbitrator = {
+    DistributedServiceLatchArbitrator(appmContext.projectName).initZookeeperForDSA()
+    DistributedServiceLatchArbitrator()
   }
 
 }

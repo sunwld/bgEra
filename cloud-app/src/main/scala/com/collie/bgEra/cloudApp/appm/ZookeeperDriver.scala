@@ -4,7 +4,6 @@ import java.util
 import java.util.concurrent.CountDownLatch
 
 import com.collie.bgEra.cloudApp.appm.watchers.ConnectionWatcher
-import com.collie.bgEra.cloudApp.utils.ContextHolder
 import org.apache.zookeeper.ZooDefs.Ids
 import org.apache.zookeeper._
 import org.apache.zookeeper.data.Stat
@@ -13,7 +12,7 @@ class ZookeeperDriver {
 
   //    def apply: ZookeeperDriver = new ZookeeperDriver()
   private var zk: ZooKeeper = _
-  var zkUrl : String = _
+  var zkUrl: String = _
 
   var connectedSignal: CountDownLatch = _
   val SESSION_TIMEOUT = 5000
@@ -34,19 +33,22 @@ class ZookeeperDriver {
     new String(b, "UTF-8")
   }
 
+  def isConnected(): Boolean = {
+    zk.getState.isConnected
+  }
+
   def exists(path: String, retryTimes: Int = MAX_RETRY_TIMES): Stat = {
     try {
       zk.exists(path, false)
     } catch {
       case ex: KeeperException => {
         if (retryTimes == 0) {
-          throw new AppClusterFatalException()
+          throw new AppClusterFatalException("")
         }
         Thread.sleep(RETRY_INTERVAL)
         exists(path, retryTimes - 1)
       }
     }
-
   }
 
   def existsAndWatch(path: String, watcher: Watcher, retryTimes: Int = MAX_RETRY_TIMES): Stat = {
@@ -55,7 +57,7 @@ class ZookeeperDriver {
     } catch {
       case ex: KeeperException => {
         if (retryTimes == 0) {
-          throw new AppClusterFatalException()
+          throw new AppClusterFatalException("")
         }
         Thread.sleep(RETRY_INTERVAL)
         existsAndWatch(path, watcher, retryTimes - 1)
@@ -73,11 +75,33 @@ class ZookeeperDriver {
       }
       case ex: KeeperException => {
         if (retryTimes == 0) {
-          throw new AppClusterFatalException()
+          throw new AppClusterFatalException("")
         }
         Thread.sleep(RETRY_INTERVAL)
         deleteNode(path, retryTimes - 1)
       }
+    }
+  }
+
+  def createUnexistsNode(path: String, data: String, createMode: CreateMode, retryTimes: Int = MAX_RETRY_TIMES): String = {
+    if (zk.exists(path, false) == null) {
+      try {
+        zk.create(path, data, Ids.OPEN_ACL_UNSAFE, createMode)
+      } catch {
+        case ex: KeeperException.NodeExistsException => {
+          println(s"zk.create[KeeperException.NodeExistsException]:${path} node exists")
+          throw ex
+        }
+        case ex: KeeperException => {
+          if (retryTimes == 0) {
+            throw new AppClusterFatalException("")
+          }
+          Thread.sleep(RETRY_INTERVAL)
+          createNode(path, data, createMode, retryTimes - 1)
+        }
+      }
+    } else {
+      path
     }
   }
 
@@ -92,7 +116,7 @@ class ZookeeperDriver {
         }
         case ex: KeeperException => {
           if (retryTimes == 0) {
-            throw new AppClusterFatalException()
+            throw new AppClusterFatalException("")
           }
           Thread.sleep(RETRY_INTERVAL)
           createNode(path, data, createMode, retryTimes - 1)
@@ -113,7 +137,7 @@ class ZookeeperDriver {
       }
       case ex: KeeperException => {
         if (retryTimes == 0) {
-          throw new AppClusterFatalException()
+          throw new AppClusterFatalException("")
         }
         Thread.sleep(RETRY_INTERVAL)
         getChildren(path, retryTimes - 1)
@@ -131,7 +155,7 @@ class ZookeeperDriver {
       }
       case ex: KeeperException => {
         if (retryTimes == 0) {
-          throw new AppClusterFatalException()
+          throw new AppClusterFatalException("")
         }
         Thread.sleep(RETRY_INTERVAL)
         getChildrenAndWatch(path, watcher, retryTimes - 1)
@@ -148,7 +172,7 @@ class ZookeeperDriver {
       }
       case ex: KeeperException => {
         if (retryTimes == 0) {
-          throw new AppClusterFatalException()
+          throw new AppClusterFatalException("")
         }
         Thread.sleep(RETRY_INTERVAL)
         setData(path, data, retryTimes - 1)
@@ -166,7 +190,7 @@ class ZookeeperDriver {
       }
       case ex: KeeperException => {
         if (retryTimes == 0) {
-          throw new AppClusterFatalException()
+          throw new AppClusterFatalException("")
         }
         Thread.sleep(RETRY_INTERVAL)
         getData(path, retryTimes - 1)
@@ -184,7 +208,7 @@ class ZookeeperDriver {
       }
       case ex: KeeperException => {
         if (retryTimes == 0) {
-          throw new AppClusterFatalException()
+          throw new AppClusterFatalException("")
         }
         Thread.sleep(RETRY_INTERVAL)
         getDataAndWatch(path, watcher, retryTimes - 1)
@@ -208,6 +232,7 @@ class ZookeeperDriver {
       }
     }
   }
+
   def connectZK(): Unit = {
     connectZK(this.zkUrl)
   }
