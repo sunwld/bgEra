@@ -23,7 +23,6 @@ public class ContextHolder implements ApplicationContextAware {
     @Override
     public void setApplicationContext(ApplicationContext applicationContext)
             throws BeansException {
-        System.out.println("setApplicationContext");
         ctx = applicationContext;
     }
 

@@ -4,7 +4,8 @@ import java.util.Properties
 
 import com.alibaba.druid.pool.DruidDataSource
 import com.collie.bgEra.cloudApp.appm.conf.AppmConf
-import com.collie.bgEra.cloudApp.dtsf.{DistributedTaskBus}
+import com.collie.bgEra.cloudApp.base.BaseConf
+import com.collie.bgEra.cloudApp.dtsf.DistributedTaskBus
 import com.collie.bgEra.cloudApp.redisCache.conf.RedisCacheConf
 import org.mybatis.spring.SqlSessionFactoryBean
 import org.mybatis.spring.annotation.MapperScan
@@ -53,37 +54,37 @@ class DtsfConf {
   }
 
 
-//  @Bean(name = Array("mainJobDetail"))
-//  def jobDetail(@Qualifier("distributedTaskBus") bus: DistributedTaskBus): MethodInvokingJobDetailFactoryBean = {
-//    val jobDetailFactoryBean: MethodInvokingJobDetailFactoryBean = new MethodInvokingJobDetailFactoryBean()
-//    jobDetailFactoryBean.setConcurrent(false)
-//    jobDetailFactoryBean.setName("mainJobDetail")
-//    jobDetailFactoryBean.setGroup("mainGroup")
-//    jobDetailFactoryBean.setTargetObject(bus)
-//    jobDetailFactoryBean.setTargetMethod("runBus")
-//    jobDetailFactoryBean
-//  }
-//  @Bean(name = Array("mainTrigger"))
-//  def mainJobTrigger(@Qualifier("mainJobDetail") mainJobDetail: MethodInvokingJobDetailFactoryBean): CronTriggerFactoryBean = {
-//    val trigger = new CronTriggerFactoryBean()
-//    trigger.setJobDetail(mainJobDetail.getObject)
-//    trigger.setCronExpression("0/1 * * * * ?")
-//    trigger.setName("mainTrigger")
-//    trigger
-//  }
-//
-//  @Bean(Array("mainScheduler"))
-//  def mainScheduler(@Qualifier("mainTrigger") mainTrigger: CronTriggerFactoryBean): SchedulerFactoryBean = {
-//    val scheduler = new SchedulerFactoryBean()
-//    scheduler.setTriggers(mainTrigger.getObject)
-//    scheduler.setAutoStartup(true)
-//    scheduler.setStartupDelay(5)
-//
-//    val propertiesFactoryBean = new PropertiesFactoryBean
-//    propertiesFactoryBean.setLocation(new ClassPathResource("schedulerProp/mainScheduler.properties"))
-//    propertiesFactoryBean.afterPropertiesSet()
-//    scheduler.setQuartzProperties(propertiesFactoryBean.getObject())
-//    scheduler
-//  }
+  @Bean(name = Array("mainJobDetail"))
+  def jobDetail(@Qualifier("distributedTaskBus") bus: DistributedTaskBus): MethodInvokingJobDetailFactoryBean = {
+    val jobDetailFactoryBean: MethodInvokingJobDetailFactoryBean = new MethodInvokingJobDetailFactoryBean()
+    jobDetailFactoryBean.setConcurrent(false)
+    jobDetailFactoryBean.setName("mainJobDetail")
+    jobDetailFactoryBean.setGroup("mainGroup")
+    jobDetailFactoryBean.setTargetObject(bus)
+    jobDetailFactoryBean.setTargetMethod("runBus")
+    jobDetailFactoryBean
+  }
+  @Bean(name = Array("mainTrigger"))
+  def mainJobTrigger(@Qualifier("mainJobDetail") mainJobDetail: MethodInvokingJobDetailFactoryBean): CronTriggerFactoryBean = {
+    val trigger = new CronTriggerFactoryBean()
+    trigger.setJobDetail(mainJobDetail.getObject)
+    trigger.setCronExpression("0/1 * * * * ?")
+    trigger.setName("mainTrigger")
+    trigger
+  }
+
+  @Bean(Array("mainScheduler"))
+  def mainScheduler(@Qualifier("mainTrigger") mainTrigger: CronTriggerFactoryBean): SchedulerFactoryBean = {
+    val scheduler = new SchedulerFactoryBean()
+    scheduler.setTriggers(mainTrigger.getObject)
+    scheduler.setAutoStartup(false)
+    scheduler.setStartupDelay(5)
+
+    val propertiesFactoryBean = new PropertiesFactoryBean
+    propertiesFactoryBean.setLocation(new ClassPathResource("schedulerProp/mainScheduler.properties"))
+    propertiesFactoryBean.afterPropertiesSet()
+    scheduler.setQuartzProperties(propertiesFactoryBean.getObject())
+    scheduler
+  }
 
 }

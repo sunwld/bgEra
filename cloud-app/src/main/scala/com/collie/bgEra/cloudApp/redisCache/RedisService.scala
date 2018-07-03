@@ -64,8 +64,15 @@ class RedisService {
     * @return
     */
   def setObject(key: Any, value: Any, expireTime: Long): String ={
-    val k = kryoUtil.writeClassAndObjectToByteArray(key)
-    val v = kryoUtil.writeClassAndObjectToByteArray(value)
+    var k:Array[Byte] = null
+    var v:Array[Byte] = null
+    if(key.isInstanceOf[Array[Byte]]){
+      k = key.asInstanceOf[Array[Byte]]
+      v = value.asInstanceOf[Array[Byte]]
+    }else{
+      k = kryoUtil.writeClassAndObjectToByteArray(key)
+      v = kryoUtil.writeClassAndObjectToByteArray(value)
+    }
     setObject(k,v,expireTime)
   }
 
@@ -74,9 +81,20 @@ class RedisService {
     * @param key
     * @return
     */
-  def del(key: String) = {
+  def del(key: Any): Long = {
+    var k:Array[Byte] = null
+    if(key.isInstanceOf[Array[Byte]]){
+      k = key.asInstanceOf[Array[Byte]]
+    }else{
+      k = kryoUtil.writeClassAndObjectToByteArray(key)
+    }
+    jedis.del(k)
+  }
+
+  def del(key: Array[Byte]): Long = {
     jedis.del(key)
   }
+
 
   /**
     *

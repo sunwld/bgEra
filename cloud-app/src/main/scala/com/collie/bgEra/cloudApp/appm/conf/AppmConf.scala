@@ -1,8 +1,10 @@
 package com.collie.bgEra.cloudApp.appm.conf
 
-import com.collie.bgEra.cloudApp.appm.{AppManagerStandardSkill, DistributedServiceLatchArbitrator, ZApplicationManager, ZookeeperDriver}
+import com.collie.bgEra.cloudApp.appm.{AppManagerStandardSkill, DistributedServiceLatchArbitrator, ZApplicationManager}
+import com.collie.bgEra.cloudApp.base.{BaseConf, ZookeeperDriver}
+import com.collie.bgEra.cloudApp.redisCache.conf.RedisCacheConf
 import org.springframework.beans.factory.annotation.{Autowired, Qualifier, Value}
-import org.springframework.context.annotation.{Bean, ComponentScan, Configuration}
+import org.springframework.context.annotation.{Bean, ComponentScan, Configuration, Import}
 
 /**
   * APPM:cloud application manager
@@ -15,6 +17,7 @@ import org.springframework.context.annotation.{Bean, ComponentScan, Configuratio
   * 并且将AppManagerStandardSkill的实现类注册到SPRING中
   */
 @Configuration
+@Import(Array(classOf[BaseConf]))
 @ComponentScan(Array("com.collie.bgEra.cloudApp.appm", "com.collie.bgEra.cloudApp.utils"))
 class AppmConf {
   @Autowired
@@ -31,14 +34,6 @@ class AppmConf {
   //    zappm.implementZManagement()
   //    zappm
   //  }
-
-  @Bean(name = Array("zkDriver"))
-  def getZkDriver(@Qualifier("zkUrl") zkUrl: String): ZookeeperDriver = {
-    println("getzkDriver")
-    val driver: ZookeeperDriver = new ZookeeperDriver()
-    driver.connectZK(zkUrl)
-    driver
-  }
 
   @Bean(name = Array("zApplicationManager"))
   def getZApplicationManager(): ZApplicationManager = {

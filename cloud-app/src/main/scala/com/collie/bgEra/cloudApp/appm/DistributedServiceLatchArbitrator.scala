@@ -1,10 +1,16 @@
 package com.collie.bgEra.cloudApp.appm
 
+import java.util.concurrent.CountDownLatch
+
+import com.collie.bgEra.cloudApp.appm.watchers.DSAZKNodeWatcher
+import com.collie.bgEra.cloudApp.base.ZookeeperDriver
 import com.collie.bgEra.cloudApp.utils.ContextHolder
 import org.apache.zookeeper.{CreateMode, KeeperException}
+import org.slf4j.{Logger, LoggerFactory}
 
 
 class DistributedServiceLatchArbitrator private(val projectName: String) {
+  private var logger: Logger = LoggerFactory.getLogger("appm")
 
   private val rootPath: String = "/appm"
   private val latchPath: String = s"$rootPath/latch"
@@ -29,23 +35,36 @@ class DistributedServiceLatchArbitrator private(val projectName: String) {
     zkDriver.createNode(latchPath, "", CreateMode.PERSISTENT)
   }
 
-  def grabLatch(latchKey: String) = {
+  def grabLatch(latchKey: String): String = {
     //创建node
     var latchKeyPath = s"$latchPath/$latchKey"
     try {
       zkDriver.createUnexistsNode(latchKeyPath, "", CreateMode.EPHEMERAL)
+      val latchId = latchKeyPath + System.currentTimeMillis()
+      zkDriver.setData(latchKeyPath,latchId)
+      latchId
     } catch {
       case ex: KeeperException.NodeExistsException => {
-        // node exists
-
+        Thread.sleep((new util.Random).nextInt(100))
+        if(zkDriver.exists(latchKeyPath) == null){
+          grabLatch(latchKey)
+        }else{
+          val countDownLatch = new CountDownLatch(1)
+          // node not exists
+          if( zkDriver.existsAndWatch(latchKeyPath,DSAZKNodeWatcher(countDownLatch,latchKeyPath)) == null ){
+            grabLatch(latchKey)
+          }else{
+            countDownLatch.await()
+            grabLatch(latchKey)
+          }
+        }
       }
     }
-
-    //
   }
 
-  def releaseLatch(latchKey: String) = {
-
+  def releaseLatch(latchKey: String,latchId: String) = {
+    var latchKeyPath = s"$latchPath/$latchKey"
+    zkDriver.deleteNodeSafely(latchKeyPath,latchId)
   }
 }
 

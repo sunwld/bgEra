@@ -1,8 +1,7 @@
-package com.collie.bgEra.cloudApp.appm.watchers
+package com.collie.bgEra.cloudApp.base
 
 import java.util.concurrent.CountDownLatch
 
-import com.collie.bgEra.cloudApp.appm.{ZookeeperDriver}
 import com.collie.bgEra.cloudApp.utils.ContextHolder
 import org.apache.zookeeper.Watcher.Event.KeeperState
 import org.apache.zookeeper.{WatchedEvent, Watcher}
