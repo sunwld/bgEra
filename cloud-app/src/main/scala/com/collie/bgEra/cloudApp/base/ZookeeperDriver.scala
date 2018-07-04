@@ -9,6 +9,9 @@ import org.apache.zookeeper._
 import org.apache.zookeeper.data.Stat
 import org.slf4j.{Logger, LoggerFactory}
 
+import scala.collection.mutable
+import scala.collection.JavaConversions._
+
 class ZookeeperDriver {
   private var logger: Logger = LoggerFactory.getLogger("appm")
   //    def apply: ZookeeperDriver = new ZookeeperDriver()
@@ -66,9 +69,9 @@ class ZookeeperDriver {
     }
   }
 
-  def deleteNodeSafely(path: String,data: String, retryTimes: Int = MAX_RETRY_TIMES): Unit ={
-    if(exists(path) != null && getData(path).equals(data)){
-      deleteNode(path,retryTimes)
+  def deleteNodeSafely(path: String, data: String, retryTimes: Int = MAX_RETRY_TIMES): Unit = {
+    if (exists(path) != null && getData(path).equals(data)) {
+      deleteNode(path, retryTimes)
     }
   }
 
@@ -100,7 +103,7 @@ class ZookeeperDriver {
       }
       case ex: KeeperException => {
         if (retryTimes == 0) {
-          logger.error(s"createUnexistsNode failed ",ex)
+          logger.error(s"createUnexistsNode failed ", ex)
           throw new AppClusterFatalException("")
         }
         logger.debug(s"createUnexistsNode failed, will retry $retryTimes")
@@ -121,7 +124,7 @@ class ZookeeperDriver {
         }
         case ex: KeeperException => {
           if (retryTimes == 0) {
-            logger.error(s"createNode failed ",ex)
+            logger.error(s"createNode failed ", ex)
             throw new AppClusterFatalException("")
           }
           logger.debug(s"createNode failed, will retry $retryTimes")
@@ -134,17 +137,17 @@ class ZookeeperDriver {
     }
   }
 
-  def getChildren(path: String, retryTimes: Int = MAX_RETRY_TIMES): util.List[String] = {
+  def getChildren(path: String, retryTimes: Int = MAX_RETRY_TIMES): mutable.Seq[String] = {
     try {
       zk.getChildren(path, false)
     } catch {
       case ex: KeeperException.NoNodeException => {
         logger.debug(s"zk.getChildren[KeeperException.NoNodeException]:the node $path is not exists.")
-        new util.ArrayList[String]()
+        mutable.Seq[String]()
       }
       case ex: KeeperException => {
         if (retryTimes == 0) {
-          logger.error(s"getChildren failed ",ex)
+          logger.error(s"getChildren failed ", ex)
           throw new AppClusterFatalException("")
         }
         logger.debug(s"getChildren failed, will retry $retryTimes")
@@ -154,17 +157,17 @@ class ZookeeperDriver {
     }
   }
 
-  def getChildrenAndWatch(path: String, watcher: Watcher, retryTimes: Int = MAX_RETRY_TIMES): util.List[String] = {
+  def getChildrenAndWatch(path: String, watcher: Watcher, retryTimes: Int = MAX_RETRY_TIMES): mutable.Seq[String] = {
     try {
       zk.getChildren(path, watcher)
     } catch {
       case ex: KeeperException.NoNodeException => {
         logger.debug(s"zk.getChildren[KeeperException.NoNodeException]:the node $path is not exists.")
-        new util.ArrayList[String]()
+        mutable.Seq[String]()
       }
       case ex: KeeperException => {
         if (retryTimes == 0) {
-          logger.error(s"getChildrenAndWatch failed ",ex)
+          logger.error(s"getChildrenAndWatch failed ", ex)
           throw new AppClusterFatalException("")
         }
         logger.debug(s"getChildrenAndWatch failed, will retry $retryTimes")
@@ -183,7 +186,7 @@ class ZookeeperDriver {
       }
       case ex: KeeperException => {
         if (retryTimes == 0) {
-          logger.error(s"setData failed ",ex)
+          logger.error(s"setData failed ", ex)
           throw new AppClusterFatalException("")
         }
         logger.debug(s"setData failed, will retry $retryTimes")
@@ -203,7 +206,7 @@ class ZookeeperDriver {
       }
       case ex: KeeperException => {
         if (retryTimes == 0) {
-          logger.error(s"getData failed ",ex)
+          logger.error(s"getData failed ", ex)
           throw new AppClusterFatalException("")
         }
         logger.debug(s"getData failed, will retry $retryTimes")
@@ -212,7 +215,6 @@ class ZookeeperDriver {
       }
     }
   }
-
 
 
   def getDataAndWatch(path: String, watcher: Watcher, retryTimes: Int = MAX_RETRY_TIMES): String = {
@@ -225,7 +227,7 @@ class ZookeeperDriver {
       }
       case ex: KeeperException => {
         if (retryTimes == 0) {
-          logger.error(s"getDataAndWatch failed ",ex)
+          logger.error(s"getDataAndWatch failed ", ex)
           throw new AppClusterFatalException("")
         }
         logger.debug(s"getDataAndWatch failed, will retry $retryTimes")
