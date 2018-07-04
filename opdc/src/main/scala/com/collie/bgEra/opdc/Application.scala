@@ -8,7 +8,7 @@ import org.springframework.context.annotation._
 
 //@EnableEurekaClient
 //@EnableDiscoveryClient
-@Import(Array(classOf[ConfToDtsf]))
+//@Import(Array(classOf[ConfToDtsf]))
 @SpringBootApplication(scanBasePackages = Array("com.collie.bgEra.opdc"))
 class Config extends WebMvcConfigurationSupport{
 //    @Bean(name = Array("dataSource"))

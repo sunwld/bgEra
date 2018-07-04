@@ -1,6 +1,6 @@
 package com.collie.bgEra.cloudApp.redisCache;
 
-import com.collie.bgEra.cloudApp.appm.DistributedServiceLatchArbitrator;
+import com.collie.bgEra.cloudApp.dsla.DistributedServiceLatchArbitrator;
 import org.aspectj.lang.JoinPoint;
 import org.aspectj.lang.ProceedingJoinPoint;
 import org.aspectj.lang.annotation.*;

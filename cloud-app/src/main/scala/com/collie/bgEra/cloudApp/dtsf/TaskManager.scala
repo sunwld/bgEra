@@ -1,13 +1,12 @@
 package com.collie.bgEra.cloudApp.dtsf
 
-import com.collie.bgEra.cloudApp.dtsf.bean.{ShardingInfo, TaskResult, WorkUnitResult}
+import com.collie.bgEra.cloudApp.dtsf.bean.{TaskResult, WorkUnitResult}
 import org.springframework.util.StopWatch.TaskInfo
 
+import scala.collection.mutable
+
 trait TaskManager {
-
-  def getPreparedTaskList(shardingInfo: ShardingInfo): List[List[String]]
-
-  def getPreparedTaskList(instId: Long): List[List[String]]
+  def getPreparedTaskList(zkSessionId: String): mutable.Seq[mutable.Seq[String]]
 
   def runTask(taskInfo: TaskInfo): TaskResult
 

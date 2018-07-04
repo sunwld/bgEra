@@ -1,8 +1,8 @@
-package com.collie.bgEra.cloudApp.appm
+package com.collie.bgEra.cloudApp.dsla
 
 import java.util.concurrent.CountDownLatch
 
-import com.collie.bgEra.cloudApp.appm.watchers.DSAZKNodeWatcher
+import com.collie.bgEra.cloudApp.appm.AppClusterFatalException
 import com.collie.bgEra.cloudApp.base.ZookeeperDriver
 import com.collie.bgEra.cloudApp.utils.ContextHolder
 import org.apache.zookeeper.{CreateMode, KeeperException}
@@ -10,7 +10,7 @@ import org.slf4j.{Logger, LoggerFactory}
 
 
 class DistributedServiceLatchArbitrator private(val projectName: String) {
-  private var logger: Logger = LoggerFactory.getLogger("appm")
+  private val logger: Logger = LoggerFactory.getLogger("appm")
 
   private val rootPath: String = "/appm"
   private val latchPath: String = s"$rootPath/latch"

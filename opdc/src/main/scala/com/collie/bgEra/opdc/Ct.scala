@@ -20,9 +20,6 @@ class Ct {
     @Autowired
     val service : TestService = null
 
-    @Autowired
-    val bean: MethodInvokingJobDetailFactoryBean = null
-
       /**
       * 孙文龙
       * @return

@@ -9,5 +9,49 @@
     SELECT NAME,shardingvalue,description FROM dtf_targetinfo ORDER BY shardingvalue
   </select>
 
+  <insert id="insertTargetShardingMap" >
+    insert  into dtf_sharding_map(zksession, dtftargetid)
+    values
+    <foreach collection="list" item="shardTarget" index="index" separator=",">
+      (
+      #{shardTarget.zkSessionId},
+      #{shardTarget.dtfTargetId}
+      )
+    </foreach>
+  </insert>
+
+  <delete id="deleteTargetShardingMap">
+    delete from dtf_sharding_map
+  </delete>
+
+  <insert id="insertZkSessionInfo" parameterType="java.util.List">
+    insert  into dtf_zksession(sessionid, ismaster)
+    values
+    <foreach collection="list" item="item" index="index" separator=",">
+      (
+      #{item.zksessionId},
+      #{item.isMaster}
+      )
+    </foreach>
+  </insert>
+
+  <delete id="deleteAllZkSessionInfo">
+    delete from dtf_zksession
+  </delete>
+
+  <select id="getTargetShardingMap" resultType="com.collie.bgEra.cloudApp.dtsf.bean.ShardingTarget">
+    select zksession zkSessionId,dtftargetid dtfTargetId from dtf_sharding_map
+  </select>
+
+  <select id="qryTaskInfoListByTargets" parameterType="java.util.List" resultType="com.collie.bgEra.cloudApp.dtsf.bean.TaskInfo" >
+  select name taskName,targetid targetId,schedulename taskSchedulerBean,
+  description,threadpoolname taskThreadPoolName,
+  status,runresult runResult,errors,thistime thisTime,
+  nexttime nextTime from dtf_task t
+ where t.targetid in
+  <foreach collection="list" index="index" item="item" open="(" separator="," close=")">
+    #{item}
+  </foreach>
+  </select>
 
 </mapper>

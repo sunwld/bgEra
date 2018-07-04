@@ -1,13 +1,9 @@
-package com.collie.bgEra.cloudApp.appm.watchers
+package com.collie.bgEra.cloudApp.dsla
 
 import java.util.concurrent.CountDownLatch
 
-import com.collie.bgEra.cloudApp.appm.{AppClusterFatalException, ZApplicationManager}
-import com.collie.bgEra.cloudApp.appm.watchers.ClusterStatusWatcher.logger
-import com.collie.bgEra.cloudApp.base.ConnectionWatcher.connectionWatcher
 import org.apache.zookeeper.Watcher.Event.EventType
 import org.apache.zookeeper.{WatchedEvent, Watcher}
-import org.slf4j.{Logger, LoggerFactory}
 
 
 class DSAZKNodeWatcher private(connectedSignal: CountDownLatch,latchKey: String) extends Watcher{

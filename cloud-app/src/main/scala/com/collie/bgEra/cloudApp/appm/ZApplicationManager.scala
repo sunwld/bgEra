@@ -140,8 +140,8 @@ class ZApplicationManager private(
     zookeeperDriver.createNode(votePath, "", CreateMode.PERSISTENT)
     zookeeperDriver.createNode(clusterVersionPath, "1", CreateMode.PERSISTENT)
 
-    val voters: util.List[String] = zookeeperDriver.getChildren(votePath)
-    val currVoters: mutable.Buffer[String] =
+    val voters: mutable.Seq[String] = zookeeperDriver.getChildren(votePath)
+    val currVoters: mutable.Seq[String] =
       voters.filter(_.startsWith(s"${zookeeperDriver.getSessionId()}$voteSplit"))
     if (currVoters.size == 0) {
       this.clusterInfo.currentVotid = zookeeperDriver.createNode(
@@ -158,7 +158,7 @@ class ZApplicationManager private(
 
   def getVoteResult(): (String, String) = {
     val mySeq = this.clusterInfo.currentVotid.split(voteSplit)(1)
-    val voters: util.List[String] = zookeeperDriver.getChildren(votePath)
+    val voters: mutable.Seq[String] = zookeeperDriver.getChildren(votePath)
     val sortedVoters = voters.sortBy(_.split(voteSplit)(1))
 
     if (mySeq == sortedVoters(0).split(voteSplit)(1)) {
@@ -173,7 +173,7 @@ class ZApplicationManager private(
     this.voterPlace
   }
 
-  def watchVoteNode(): util.List[String] = {
+  def watchVoteNode(): mutable.Seq[String] = {
     getVoteResult()
     if (voterPlace._1.equals(MASTER)) {
       logger.info(s"watchVoteNode:i am  master.place:$voterPlace")
@@ -187,7 +187,7 @@ class ZApplicationManager private(
           watchVoteNode()
           logger.info(s"watchVoteNode:Warining:Prev Node is not exists, will getVoteResult() and retry!")
         }
-        this.clusterInfo.clusterVotids = new util.ArrayList[String]()
+        this.clusterInfo.clusterVotids = mutable.Seq[String]()
         this.clusterInfo.clusterVotids
       }
       catch {
@@ -195,7 +195,7 @@ class ZApplicationManager private(
           Thread.sleep(100)
           watchVoteNode()
           logger.warn(s"watchVoteNode:Exception:Prev Node is not exists, will getVoteResult() and retry!")
-          this.clusterInfo.clusterVotids = new util.ArrayList[String]()
+          this.clusterInfo.clusterVotids = mutable.Seq[String]()
           this.clusterInfo.clusterVotids
         }
       }
@@ -272,7 +272,7 @@ class ZApplicationManager private(
     try {
       appManagerStandardSkill.reallocation(clusterInfo)
     } catch {
-      case ex: Exception => throw new AppClusterFatalException("")
+      case ex: Exception => throw new AppClusterFatalException("",ex)
     }
   }
 }

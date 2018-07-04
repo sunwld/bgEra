@@ -3,9 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <title>Document</title>
-<#--<link href="/css/index.css" rel="stylesheet"/>-->
-    <link rel="stylesheet" href="/static/extjs62/theme-triton/resources/theme-triton-all.css" type="text/css"/>
-
+    <script type="text/javascript" src="/static/extjs62/ext-bootstrap.js"></script>
 </head>
 <body>
 <div class="container">

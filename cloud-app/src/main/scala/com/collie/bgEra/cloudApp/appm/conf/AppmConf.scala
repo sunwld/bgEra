@@ -1,7 +1,8 @@
 package com.collie.bgEra.cloudApp.appm.conf
 
-import com.collie.bgEra.cloudApp.appm.{AppManagerStandardSkill, DistributedServiceLatchArbitrator, ZApplicationManager}
+import com.collie.bgEra.cloudApp.appm.{AppManagerStandardSkill, ZApplicationManager}
 import com.collie.bgEra.cloudApp.base.{BaseConf, ZookeeperDriver}
+import com.collie.bgEra.cloudApp.dsla.DistributedServiceLatchArbitrator
 import com.collie.bgEra.cloudApp.redisCache.conf.RedisCacheConf
 import org.springframework.beans.factory.annotation.{Autowired, Qualifier, Value}
 import org.springframework.context.annotation.{Bean, ComponentScan, Configuration, Import}
@@ -27,14 +28,6 @@ class AppmConf {
   @Autowired
   val appmContext: AppmContext = null
 
-  //  @Bean(Array("zappm"))
-  //  def getZApplicationManager(): ZApplicationManager = {
-  //    val zappm = ZApplicationManager(appmContext.projectName, appmContext.minLiveServCount,
-  //      appmContext.clusterInitServCount, appManagerStandardSkill)
-  //    zappm.implementZManagement()
-  //    zappm
-  //  }
-
   @Bean(name = Array("zApplicationManager"))
   def getZApplicationManager(): ZApplicationManager = {
     ZApplicationManager(appmContext.projectName, appmContext.minLiveServCount,
@@ -42,10 +35,6 @@ class AppmConf {
     ZApplicationManager()
   }
 
-  @Bean(name = Array("distributedServiceLatchArbitrator"))
-  def getDistributedServiceLatchArbitrator: DistributedServiceLatchArbitrator = {
-    DistributedServiceLatchArbitrator(appmContext.projectName).initZookeeperForDSA()
-    DistributedServiceLatchArbitrator()
-  }
+
 
 }
