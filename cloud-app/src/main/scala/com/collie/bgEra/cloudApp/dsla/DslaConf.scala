@@ -1,6 +1,6 @@
 package com.collie.bgEra.cloudApp.dsla
 
-import com.collie.bgEra.cloudApp.appm.conf.AppmContext
+import com.collie.bgEra.cloudApp.CloudAppContext
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.context.annotation.{Bean, ComponentScan, Configuration, EnableAspectJAutoProxy}
 
@@ -10,11 +10,11 @@ import org.springframework.context.annotation.{Bean, ComponentScan, Configuratio
 @EnableAspectJAutoProxy
 class DslaConf {
   @Autowired
-  val appmContext: AppmContext = null
+  val context: CloudAppContext = null
 
   @Bean(name = Array("distributedServiceLatchArbitrator"))
   def getDistributedServiceLatchArbitrator: DistributedServiceLatchArbitrator = {
-    DistributedServiceLatchArbitrator(appmContext.projectName).initZookeeperForDSA()
+    DistributedServiceLatchArbitrator(context.projectName).initZookeeperForDSA()
     DistributedServiceLatchArbitrator()
   }
 

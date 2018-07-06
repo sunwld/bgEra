@@ -4,11 +4,13 @@ import com.collie.bgEra.cloudApp.dtsf.TaskManager
 import com.collie.bgEra.cloudApp.dtsf.bean.{TaskInfo, TaskResult, WorkUnitResult}
 import com.collie.bgEra.cloudApp.dtsf.mapper.TaskMapper
 import org.springframework.beans.factory.annotation.Autowired
+import org.springframework.stereotype.Component
 import org.springframework.util.StopWatch
 
 import scala.collection.JavaConversions._
 import scala.collection.mutable
 
+@Component
 class TaskManagerImpl extends TaskManager{
   @Autowired
   val taskMapper: TaskMapper = null
@@ -17,9 +19,15 @@ class TaskManagerImpl extends TaskManager{
     //get targetids
     val shardTargetMapper: mutable.Map[String,java.util.List[String]]
       = taskMapper.getTargetShardingMap()
+
     val myShardTargetList:mutable.Seq[String] = shardTargetMapper(zkSessionId)
-    val myShardTaskMap : mutable.Map[String,TaskInfo] =
-      taskMapper.qryTaskInfoListByTargets(zkSessionId,myShardTargetList)
+
+    val zsetItemList = taskMapper.qryPerpredTaskListByTargets(zkSessionId,myShardTargetList,System.currentTimeMillis())
+    if(zsetItemList != null && zsetItemList.size() > 0){
+      val myShardTaskMap : mutable.Map[String,TaskInfo] =
+        taskMapper.qryTaskInfoListByTargets(zkSessionId,myShardTargetList)
+    }
+
 
     //
     null

@@ -1,5 +1,6 @@
 package com.collie.bgEra.cloudApp.appm.conf
 
+import com.collie.bgEra.cloudApp.CloudAppContext
 import com.collie.bgEra.cloudApp.appm.{AppManagerStandardSkill, ZApplicationManager}
 import com.collie.bgEra.cloudApp.base.{BaseConf, ZookeeperDriver}
 import com.collie.bgEra.cloudApp.dsla.DistributedServiceLatchArbitrator
@@ -26,12 +27,12 @@ class AppmConf {
   val appManagerStandardSkill: AppManagerStandardSkill = null
 
   @Autowired
-  val appmContext: AppmContext = null
+  val context: CloudAppContext = null
 
   @Bean(name = Array("zApplicationManager"))
   def getZApplicationManager(): ZApplicationManager = {
-    ZApplicationManager(appmContext.projectName, appmContext.minLiveServCount,
-      appmContext.clusterInitServCount, appManagerStandardSkill).implementZManagement()
+    ZApplicationManager(context.projectName, context.minLiveServCount,
+      context.clusterInitServCount, appManagerStandardSkill).implementZManagement()
     ZApplicationManager()
   }
 

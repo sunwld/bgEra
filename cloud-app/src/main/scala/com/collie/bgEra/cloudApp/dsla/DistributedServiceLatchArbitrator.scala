@@ -10,7 +10,7 @@ import org.slf4j.{Logger, LoggerFactory}
 
 
 class DistributedServiceLatchArbitrator private(val projectName: String) {
-  private val logger: Logger = LoggerFactory.getLogger("appm")
+  private val logger: Logger = LoggerFactory.getLogger("dsla")
 
   private val rootPath: String = "/appm"
   private val latchPath: String = s"$rootPath/latch"
@@ -38,10 +38,12 @@ class DistributedServiceLatchArbitrator private(val projectName: String) {
   def grabLatch(latchKey: String): String = {
     //创建node
     var latchKeyPath = s"$latchPath/$latchKey"
+    val zkSessionId: Long = zkDriver.getSessionId()
     try {
       zkDriver.createUnexistsNode(latchKeyPath, "", CreateMode.EPHEMERAL)
-      val latchId = latchKeyPath + System.currentTimeMillis()
+      val latchId = s"$latchKeyPath,latchTime:${System.currentTimeMillis()},zkSession:${zkSessionId}"
       zkDriver.setData(latchKeyPath,latchId)
+      logger.info(s"session: $zkSessionId get latch $latchKeyPath")
       latchId
     } catch {
       case ex: KeeperException.NodeExistsException => {
@@ -65,6 +67,7 @@ class DistributedServiceLatchArbitrator private(val projectName: String) {
   def releaseLatch(latchKey: String,latchId: String) = {
     var latchKeyPath = s"$latchPath/$latchKey"
     zkDriver.deleteNodeSafely(latchKeyPath,latchId)
+    logger.info(s"session: ${zkDriver.getSessionId()} release latch $latchKeyPath")
   }
 }
 

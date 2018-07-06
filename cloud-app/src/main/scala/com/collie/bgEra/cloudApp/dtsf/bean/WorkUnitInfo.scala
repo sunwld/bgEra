@@ -1,5 +1,7 @@
 package com.collie.bgEra.cloudApp.dtsf.bean
 
+import java.util.Date
+
 import scala.beans.BeanProperty
 
 /**
@@ -10,14 +12,17 @@ import scala.beans.BeanProperty
   * 以及WORKUNIT相关的SPRING BEAN的名称，这些WORKUNIT BEAN必须实现了WORKUNITRUNABLE接口
   */
 class WorkUnitInfo {
-
   @BeanProperty var workUnitName: String = _
 
   @BeanProperty var targetId: String = _
 
   @BeanProperty var runOrder: Int = _
 
-  @BeanProperty var resourceMap: Map[String, ResourceInfo] = _
-
   @BeanProperty var springBeanName: String = _
+
+  @BeanProperty var thisTime: Date = _
+
+  @BeanProperty var runResult: String = _
+
+  @BeanProperty var errors: Long = _
 }

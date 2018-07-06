@@ -6,6 +6,7 @@ import com.collie.bgEra.cloudApp.appm.ClusterInfo
 import com.collie.bgEra.cloudApp.dtsf.ShardingManager
 import com.collie.bgEra.cloudApp.dtsf.bean.{ShardingTarget, TargetInfo, ZkSessionInfo}
 import com.collie.bgEra.cloudApp.dtsf.mapper.TaskMapper
+import com.collie.bgEra.cloudApp.redisCache.RedisService
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.stereotype.Component
 
@@ -17,6 +18,10 @@ import scala.collection.JavaConversions._
 class ShardingManagerImpl extends ShardingManager{
   @Autowired
   private val taskMapper: TaskMapper = null
+
+  @Autowired(required = false)
+  val redisService: RedisService = null
+
   override def generateCurrentInstanceId: Long = ???
 
   override def queryShardingInfoByInstaceId(instId: Long): Unit = ???
@@ -25,7 +30,8 @@ class ShardingManagerImpl extends ShardingManager{
 
   override def reShardTargetsAfterLeaver(): Unit = ???
 
-  override def reshardTargets(zkSessionIds: mutable.Seq[String]) = {
+  override def  reshardTargets(zkSessionIds: mutable.Seq[String]) = {
+    redisService.delKeyByPattern("bgEra.cloudApp.dtsf.*")
     val dtsfTargList: mutable.Seq[TargetInfo] = taskMapper.qryAllTartInfo()
     val sharedTargetInfo: util.List[ShardingTarget] = new util.ArrayList[ShardingTarget]()
     val nodeCount = zkSessionIds.size
@@ -43,7 +49,6 @@ class ShardingManagerImpl extends ShardingManager{
   }
 
   override def saveZksessionInfo(clusterInfo: ClusterInfo): Unit = {
-//    val clusterInfoList: mutable.Seq[Map[String,Object]] =  mutable.Seq[Map[String,Object]]()
     val votids: mutable.Seq[String] = clusterInfo.clusterVotids
     val clusterInfoList: mutable.Seq[ZkSessionInfo] = votids.map(nodeSessionId => {
       if(nodeSessionId.equals(clusterInfo.currentVotid)){
@@ -54,4 +59,6 @@ class ShardingManagerImpl extends ShardingManager{
     })
     taskMapper.insertZkSessionInfo(clusterInfoList)
   }
+
+
 }

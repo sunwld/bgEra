@@ -1,6 +1,7 @@
 package com.collie.bgEra.cloudApp.redisCache.conf
 
-import org.springframework.context.annotation.{Bean, ComponentScan, Configuration, EnableAspectJAutoProxy}
+import com.collie.bgEra.cloudApp.dsla.DslaConf
+import org.springframework.context.annotation._
 
 
 /**
@@ -18,6 +19,7 @@ import org.springframework.context.annotation.{Bean, ComponentScan, Configuratio
   */
 @Configuration
 @ComponentScan(Array("com.collie.bgEra.cloudApp.redisCache"))
+@Import(Array(classOf[DslaConf]))
 @EnableAspectJAutoProxy
 class RedisCacheConf {
 

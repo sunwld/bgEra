@@ -27,4 +27,6 @@ class TaskInfo {
 
   @BeanProperty var nextTime: Date = _
 
+
+  override def toString = s"TaskInfo($taskName, $targetId, $description, $workUnitList, $taskSchedulerBean, $taskThreadPoolName, $status, $runResult, $errors, $thisTime, $nextTime)"
 }
