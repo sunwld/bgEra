@@ -43,7 +43,9 @@ class DistributedServiceLatchArbitrator private(val projectName: String) {
           if( zkSession.existsAndWatch(latchKeyPath,DSAZKNodeWatcher(countDownLatch,latchKeyPath)) == null ){
             grabLatch(latchKey)
           }else{
+            logger.info(latchKey+"will sleep for watcher")
             countDownLatch.await()
+            logger.info(latchKey+"end sleep")
             grabLatch(latchKey)
           }
         }

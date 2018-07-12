@@ -155,7 +155,7 @@ public class RedisCacheAspect {
       }
       addRecords = AspectUtils.parseKey(anno.addRecords(), jpMethod,args,addRecords.getClass());
 
-//      latchId = getLatch(key);
+      latchId = getLatch(key);
       redisService.addZsetItemsAndTrimByIndex(key,addRecords,keepRecords,-1,reverse);
       logger.debug("add zset item to redis, redis key:" + key + "keep the zset length to " + keepRecords);
       result = pjp.proceed();
