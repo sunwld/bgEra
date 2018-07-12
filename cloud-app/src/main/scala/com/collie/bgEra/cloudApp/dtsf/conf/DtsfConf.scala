@@ -1,5 +1,6 @@
 package com.collie.bgEra.cloudApp.dtsf.conf
 
+import java.net.URL
 import java.util.Properties
 
 import com.alibaba.druid.pool.DruidDataSource
@@ -7,14 +8,16 @@ import com.collie.bgEra.cloudApp.appm.conf.AppmConf
 import com.collie.bgEra.cloudApp.base.BaseConf
 import com.collie.bgEra.cloudApp.dtsf.DistributedTaskBus
 import com.collie.bgEra.cloudApp.redisCache.conf.RedisCacheConf
+import com.collie.bgEra.commons.util.CommonUtils
 import org.mybatis.spring.SqlSessionFactoryBean
 import org.mybatis.spring.annotation.MapperScan
+import org.quartz.CronTrigger
 import org.springframework.beans.factory.annotation.{Autowired, Qualifier}
 import org.springframework.context.annotation.{Bean, ComponentScan, Configuration, Import}
 import org.springframework.core.io.support.PathMatchingResourcePatternResolver
-import org.springframework.scheduling.quartz.{CronTriggerFactoryBean, MethodInvokingJobDetailFactoryBean, SchedulerFactoryBean}
+import org.springframework.scheduling.quartz.{CronTriggerFactoryBean, MethodInvokingJobDetailFactoryBean, SchedulerFactoryBean, SimpleTriggerFactoryBean}
 import org.springframework.beans.factory.config.PropertiesFactoryBean
-import org.springframework.core.io.ClassPathResource
+import org.springframework.core.io.{ClassPathResource, Resource, UrlResource}
 import redis.clients.jedis.JedisCluster
 
 /**
@@ -49,7 +52,17 @@ class DtsfConf {
     val sqlSessionFactoryBean = new SqlSessionFactoryBean
     sqlSessionFactoryBean.setDataSource(dtfsDataSource)
     var resolver = new PathMatchingResourcePatternResolver()
-    sqlSessionFactoryBean.setMapperLocations(resolver.getResources("classpath:com/collie/bgEra/cloudApp/dtsf/mapper/*Mapper.xml"))
+//    val resources: Array[Resource] = resolver.getResources("../mapper/*Mapper.xml")
+    println(this.getClass.getResource("/").getPath)
+    val resources = resolver.getResources("classpath*:*Mapper.xml")
+//    val resources = resources
+
+//    println("=========================" + resources.size)
+//    resources.foreach(r => {
+//      println("=========================" + r.getFilename())
+//      println("=========================" + r.exists())
+//    })
+    sqlSessionFactoryBean.setMapperLocations(resources)
     sqlSessionFactoryBean
   }
 
@@ -68,8 +81,9 @@ class DtsfConf {
   def mainJobTrigger(@Qualifier("mainJobDetail") mainJobDetail: MethodInvokingJobDetailFactoryBean): CronTriggerFactoryBean = {
     val trigger = new CronTriggerFactoryBean()
     trigger.setJobDetail(mainJobDetail.getObject)
-    trigger.setCronExpression("0/1 * * * * ?")
+    trigger.setCronExpression("0/2 * * * * ?")
     trigger.setName("mainTrigger")
+    trigger.setMisfireInstruction(CronTrigger.MISFIRE_INSTRUCTION_DO_NOTHING)
     trigger
   }
 
@@ -77,13 +91,10 @@ class DtsfConf {
   def mainScheduler(@Qualifier("mainTrigger") mainTrigger: CronTriggerFactoryBean): SchedulerFactoryBean = {
     val scheduler = new SchedulerFactoryBean()
     scheduler.setTriggers(mainTrigger.getObject)
-    scheduler.setAutoStartup(true)
+    scheduler.setAutoStartup(false)
     scheduler.setStartupDelay(5)
-
-    val propertiesFactoryBean = new PropertiesFactoryBean
-    propertiesFactoryBean.setLocation(new ClassPathResource("schedulerProp/mainScheduler.properties"))
-    propertiesFactoryBean.afterPropertiesSet()
-    scheduler.setQuartzProperties(propertiesFactoryBean.getObject())
+    val mainScheduler = CommonUtils.readPropertiesFile("schedulerProp/mainScheduler.properties")
+    scheduler.setQuartzProperties(mainScheduler)
     scheduler
   }
 

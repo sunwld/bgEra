@@ -9,7 +9,7 @@ import java.lang.annotation.*;
 @Target({ElementType.METHOD})
 @Retention(RetentionPolicy.RUNTIME)
 @Documented
-public @interface DelHsetItem {
+public @interface HsetDelItem {
   String cacheKey();
   String field();
 }

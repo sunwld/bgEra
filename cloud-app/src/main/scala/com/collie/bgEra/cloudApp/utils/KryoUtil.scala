@@ -39,7 +39,7 @@ object KryoUtil {
     *
     * @return 当前线程的 Kryo 实例
     */
-  def getInstance: Kryo = kryoLocal.get
+  def getInstance(): Kryo = kryoLocal.get
 
 
   //-----------------------------------------------
@@ -58,12 +58,12 @@ object KryoUtil {
     var byteArrayOutputStream: ByteArrayOutputStream = null
     var output: Output = null
     try{
-      byteArrayOutputStream = new ByteArrayOutputStream
+      byteArrayOutputStream = new ByteArrayOutputStream()
       output = new Output(byteArrayOutputStream)
       val kryo = getInstance
       kryo.writeClassAndObject(output, obj)
       output.flush()
-      byteArrayOutputStream.toByteArray
+      byteArrayOutputStream.toByteArray()
     } finally {
       if(byteArrayOutputStream != null){
         byteArrayOutputStream.close()
@@ -102,11 +102,15 @@ object KryoUtil {
   def readFromByteArray[T](byteArray: Array[Byte]): T = {
     var byteArrayInputStream: ByteArrayInputStream = null
     var input: Input = null
+    var result: Object = null
     try {
-      byteArrayInputStream = new ByteArrayInputStream(byteArray)
-      input = new Input(byteArrayInputStream)
-      val kryo = getInstance
-      kryo.readClassAndObject(input).asInstanceOf[T]
+      if(byteArray != null){
+        byteArrayInputStream = new ByteArrayInputStream(byteArray)
+        input = new Input(byteArrayInputStream)
+        val kryo = getInstance()
+        result = kryo.readClassAndObject(input)
+      }
+      result.asInstanceOf[T]
     } finally {
       if(byteArrayInputStream != null){
         byteArrayInputStream.close()

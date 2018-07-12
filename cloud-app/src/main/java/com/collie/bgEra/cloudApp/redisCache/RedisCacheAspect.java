@@ -3,18 +3,20 @@ package com.collie.bgEra.cloudApp.redisCache;
 import com.collie.bgEra.cloudApp.dsla.DistributedServiceLatchArbitrator;
 import com.collie.bgEra.cloudApp.redisCache.bean.ZSetItemBean;
 import com.collie.bgEra.commons.util.AspectUtils;
+import org.apache.commons.lang3.tuple.Triple;
 import org.aspectj.lang.ProceedingJoinPoint;
 import org.aspectj.lang.annotation.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.core.annotation.AnnotationUtils;
+import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
+import org.springframework.util.Assert;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.lang.reflect.Method;
+import java.util.*;
 
 
 @Aspect
@@ -25,23 +27,13 @@ public class RedisCacheAspect {
   @Autowired
   private RedisService redisService = null;
 
-//  @Pointcut("@annotation(co)")
-//  public  void cacheObjectPointCut(CacheObject co) {}
-//
-//  @Pointcut("@annotation(eo)")
-//  public  void evictObjectPointCut(EvictObject eo) {}
-//
-//  @Pointcut("@annotation(popZsetByScoreAnno)")
-//  public  void popZsetByScorePointCut(PopZsetByScore popZsetByScoreAnno) {}
-//
-//  @Pointcut("@annotation(weedoutZsetByIndex)")
-//  public  void weedoutZsetByIndexPointCut(WeedoutZsetByIndex weedoutZsetByIndex) {}
-
-
+  @Autowired
+  @Qualifier("distributedServiceLatchArbitrator")
+  private DistributedServiceLatchArbitrator latchArbitrator = null;
 
   @Around(value = "@annotation(co))")
   public Object redisCacheCommon(ProceedingJoinPoint pjp,CacheObject co) throws Throwable {
-    Object result = null;
+    Object result;
     String latchId = null;
     String key = null;
     try {
@@ -49,7 +41,8 @@ public class RedisCacheAspect {
       co = AnnotationUtils.getAnnotation(co,co.getClass());
 
       Object[] args = pjp.getArgs();
-      key = AspectUtils.parseKey(co.cacheKey(),AspectUtils.getMethod(pjp),args);
+      Method jpMethod = AspectUtils.getMethod(pjp);
+      key = AspectUtils.parseKey(co.cacheKey(), jpMethod,args);
       if(key == null){
         logger.debug("key : " + co.cacheKey() + "is Null, query data from db");
         return pjp.proceed();
@@ -62,6 +55,7 @@ public class RedisCacheAspect {
         latchId = getLatch(key);
         logger.debug("key : " + co.cacheKey() + " does not exist in redis, query data from db");
         result = pjp.proceed();
+        logger.debug("run jpMethod: " + jpMethod.getName() + "by @CacheObject");
         redisService.setObject(key, result, co.expireTime());
       }else{
         logger.debug("key : " + co.cacheKey() + "is exist in redis, query data from redis");
@@ -76,35 +70,38 @@ public class RedisCacheAspect {
   public Object updataCacheCommon(ProceedingJoinPoint pjp,EvictObject eo) throws Throwable {
     String latchId = null;
     String key = null;
+    Object result;
     try {
       eo = AnnotationUtils.getAnnotation(eo,eo.getClass());
-      Object[] args = pjp.getArgs();
-      key = AspectUtils.parseKey(eo.cacheKey(),AspectUtils.getMethod(pjp),args);
-      if(key == null){
-        throw new IllegalArgumentException("cacheKey cannot be null ");
-      }
+      Triple<Object[], Method, String> triple = resolve(pjp, eo.cacheKey());
+      Object[] args = triple.getLeft();
+      Method jpMethod = triple.getMiddle();
+      key = triple.getRight();
+
       latchId = getLatch(key);
       redisService.delKey(key);
-      return pjp.proceed();
+      logger.debug("delete key: " + key + "from redis");
+      result = pjp.proceed();
+      logger.debug("run jpMethod: " + jpMethod.getName() + "by @EvictObject");
+      return result;
     } finally {
       releaseLatch(key,latchId);
     }
   }
 
   @Around("@annotation(anno)")
-  public List<ZSetItemBean> popZsetByScoreCommon(ProceedingJoinPoint pjp,PopZsetByScore anno) throws Throwable {
+  public List<ZSetItemBean> popZsetByScoreCommon(ProceedingJoinPoint pjp,ZsetPopByScore anno) throws Throwable {
     String latchId = null;
     String key = null;
     List<ZSetItemBean> result = null;
-    Double min = 0D;
-    Double max = 0D;
+    Double min = 0d;
+    Double max = 0d;
     try {
-      Object[] args = pjp.getArgs();
       anno = AnnotationUtils.getAnnotation(anno,anno.getClass());
-      key = AspectUtils.parseKey(anno.cacheKey(),AspectUtils.getMethod(pjp),args);
-      if(key == null){
-        throw new IllegalArgumentException("cacheKey cannot be null ");
-      }
+      Triple<Object[], Method, String> triple = resolve(pjp, anno.cacheKey());
+      Object[] args = triple.getLeft();
+      Method jpMethod = triple.getMiddle();
+      key = triple.getRight();
 
       min = anno.minScore();
       max = anno.maxScore();
@@ -112,19 +109,21 @@ public class RedisCacheAspect {
       //如果没有为minScore或者maxScore指定 spel表达式，则直接取minScore和maxScore的值
       //如果指定了，则以spel表达式的值覆盖minScore和maxScore的值
       if(!"".equals(anno.minScoreSpEl())){
-        min = AspectUtils.parseKey(anno.minScoreSpEl(),AspectUtils.getMethod(pjp),args,Double.class);
+        min = AspectUtils.parseKey(anno.minScoreSpEl(),jpMethod,args,Double.class);
       }
       if(!"".equals(anno.maxScoreSpEl())){
-        max = AspectUtils.parseKey(anno.maxScoreSpEl(),AspectUtils.getMethod(pjp),args,Double.class);
+        max = AspectUtils.parseKey(anno.maxScoreSpEl(),jpMethod,args,Double.class);
       }
 
+      latchId = getLatch(key);
       if(redisService.hasKey(key)){
         result = redisService.popZSetItemByScoreWithScore(key,min,max);
+        logger.debug("pop zset item from redis, redis key:" + key + ", minScore:" + min + ",maxScore" + max);
       }else{
-        latchId = getLatch(key);
         result = (List<ZSetItemBean>) pjp.proceed();
         redisService.addZsetItems(key,result, -1);
         result = redisService.popZSetItemByScoreWithScore(key,min,max);
+        logger.debug("pop zset item from db, redis key:" + key + ", minScore:" + min + ",maxScore" + max);
       }
       return result;
     } finally {
@@ -133,95 +132,213 @@ public class RedisCacheAspect {
   }
 
   @Around("@annotation(anno)")
-  public Object popZsetByScoreCommon(ProceedingJoinPoint pjp,WeedoutZsetByIndex anno) throws Throwable {
+  public Object weedoutZsetByIndexCommon(ProceedingJoinPoint pjp,ZsetWeedoutByIndex anno) throws Throwable {
+//    logger.info("weedoutZsetByIndexCommon  begin");
     String latchId = null;
     String key = null;
+    Object result;
     boolean reverse;
     long keepRecords;
     List<ZSetItemBean> addRecords = new ArrayList<>();
     try {
       anno = AnnotationUtils.getAnnotation(anno,anno.getClass());
-      Object[] args = pjp.getArgs();
-      key = AspectUtils.parseKey(anno.cacheKey(),AspectUtils.getMethod(pjp),args);
-      if(key == null){
-        throw new IllegalArgumentException("cacheKey cannot be null ");
-      }
+      Triple<Object[], Method, String> triple = resolve(pjp, anno.cacheKey());
+      Object[] args = triple.getLeft();
+      Method jpMethod = triple.getMiddle();
+      key = triple.getRight();
 
       reverse = anno.reverse();
       keepRecords = anno.keepRecords();
       //如果指定了keepRecordsSpEl，则解析此表达式的值，并覆盖keepRecords指定的值
       if(!"".equals(anno.keepRecordsSpEl())){
-        keepRecords = AspectUtils.parseKey(anno.keepRecordsSpEl(),AspectUtils.getMethod(pjp),args,Long.class);
+        keepRecords = AspectUtils.parseKey(anno.keepRecordsSpEl(), jpMethod,args,Long.class);
       }
-      addRecords = AspectUtils.parseKey(anno.addRecords(),AspectUtils.getMethod(pjp),args,addRecords.getClass());
+      addRecords = AspectUtils.parseKey(anno.addRecords(), jpMethod,args,addRecords.getClass());
+
+//      latchId = getLatch(key);
+      redisService.addZsetItemsAndTrimByIndex(key,addRecords,keepRecords,-1,reverse);
+      logger.debug("add zset item to redis, redis key:" + key + "keep the zset length to " + keepRecords);
+      result = pjp.proceed();
+      logger.debug("run jpMethod: " + jpMethod.getName() + "by @ZsetWeedoutByIndex");
+      return result;
+    }finally {
+      releaseLatch(key,latchId);
+    }
+  }
+
+  @Around("@annotation(anno)")
+  @Order(100)
+  public Object zsetItemWeedoutByIndexCommon(ProceedingJoinPoint pjp,ZsetItemWeedoutByIndex anno) throws Throwable {
+    String latchId = null;
+    String key = null;
+    String itemId;
+    Double itemScore;
+    Object result;
+    boolean reverse;
+    long keepRecords;
+    try {
+      anno = AnnotationUtils.getAnnotation(anno,anno.getClass());
+      Triple<Object[], Method, String> triple = resolve(pjp, anno.cacheKey());
+      Object[] args = triple.getLeft();
+      Method jpMethod = triple.getMiddle();
+      key = triple.getRight();
+
+      reverse = anno.reverse();
+      keepRecords = anno.keepRecords();
+      //如果指定了keepRecordsSpEl，则解析此表达式的值，并覆盖keepRecords指定的值
+      if(!"".equals(anno.keepRecordsSpEl())){
+        keepRecords = AspectUtils.parseKey(anno.keepRecordsSpEl(), jpMethod,args,Long.class);
+      }
+
+      itemId = AspectUtils.parseKey(anno.itemIdEl(), jpMethod,args,String.class);
+
+      itemScore  = anno.itemScore();
+      if(!"".equals(anno.itemScoreEl())){
+        itemScore = AspectUtils.parseKey(anno.itemScoreEl(), jpMethod,args,Double.class);
+      }
 
       latchId = getLatch(key);
-      redisService.addZsetItemsAndTrimByIndex(key,addRecords,keepRecords,-1,reverse);
-      return pjp.proceed();
+      redisService.addZsetItemsAndTrimByIndex(key, Arrays.asList(ZSetItemBean.apply(itemId,itemScore)),keepRecords,-1,reverse);
+      logger.debug("add zset item to redis, redis key:" + key + "keep the zset length to " + keepRecords);
+      result = pjp.proceed();
+      logger.debug("run jpMethod: " + jpMethod.getName() + "by @ZsetItemWeedoutByIndex");
+      return result;
     } finally {
       releaseLatch(key,latchId);
     }
   }
 
   @Around("@annotation(anno)")
-  public Object putHsetCommon(ProceedingJoinPoint pjp,PutHset anno) throws Throwable {
+  public Object hsetPutCommon(ProceedingJoinPoint pjp,HsetPut anno) throws Throwable {
     String key = null;
+    Object result;
     Map<String,Object> putMap = new HashMap<>();
-    anno = AnnotationUtils.getAnnotation(anno,anno.getClass());
-    Object[] args = pjp.getArgs();
-    key = AspectUtils.parseKey(anno.cacheKey(),AspectUtils.getMethod(pjp),args);
-    if(key == null){
-      throw new IllegalArgumentException("cacheKey cannot be null ");
-    }
 
-    putMap = AspectUtils.parseKey(anno.map(),AspectUtils.getMethod(pjp),args,putMap.getClass());
+    anno = AnnotationUtils.getAnnotation(anno,anno.getClass());
+    Triple<Object[], Method, String> triple = resolve(pjp, anno.cacheKey());
+    Object[] args = triple.getLeft();
+    Method jpMethod = triple.getMiddle();
+    key = triple.getRight();
+
+    putMap = AspectUtils.parseKey(anno.map(), jpMethod,args,putMap.getClass());
+
+    result = pjp.proceed();
+    logger.debug("run jpMethod: " + jpMethod.getName() + "by @HsetPut");
     redisService.hsetPut(key,putMap);
-    return pjp.proceed();
+    logger.debug("put hset item to redis, redis key:" + key + ", items:" + putMap);
+
+    return result;
   }
 
   @Around("@annotation(anno)")
-  public Object getHsetItemCommon(ProceedingJoinPoint pjp,GetHsetItem anno) throws Throwable {
+  public Object hsetGetItemCommon(ProceedingJoinPoint pjp,HsetGetItem anno) throws Throwable {
     String key = null;
     String field = null;
-    Object result = null;
-    anno = AnnotationUtils.getAnnotation(anno,anno.getClass());
-    Object[] args = pjp.getArgs();
-    key = AspectUtils.parseKey(anno.cacheKey(),AspectUtils.getMethod(pjp),args);
-    if(key == null){
-      throw new IllegalArgumentException("cacheKey cannot be null ");
-    }
+    Object result;
+    String latchId = null;
 
-    field = AspectUtils.parseKey(anno.field(),AspectUtils.getMethod(pjp),args);
-    result = redisService.hsetGet(key,field);
-    if(result == null){
-      result = pjp.proceed();
-      redisService.hsetPut(key,field,result);
+    try {
+      anno = AnnotationUtils.getAnnotation(anno,anno.getClass());
+      Triple<Object[], Method, String> triple = resolve(pjp, anno.cacheKey());
+      Object[] args = triple.getLeft();
+      Method jpMethod = triple.getMiddle();
+      key = triple.getRight();
+
+      field = AspectUtils.parseKey(anno.field(), jpMethod,args);
+      Assert.notNull(key,"field cannot be null");
+
+      if(redisService.hexists(key,field)){
+        result = redisService.hsetGet(key,field);
+        logger.debug("get hset item from redis, redis key:" + key + ", field:" + field);
+      }else{
+        latchId = getLatch(key + ":" + field);
+        result = pjp.proceed();
+        logger.debug("run jpMethod: " + jpMethod.getName() + "by @HsetGetItem");
+        logger.debug("hset key or field is not exists, query from db, redis key:" + key + ", field:" + field);
+        redisService.hsetPut(key,field,result);
+      }
+    } finally {
+      releaseLatch(key + ":" + field, latchId);
     }
     return result;
   }
 
   @Around("@annotation(anno)")
-  public Object delHsetItemCommon(ProceedingJoinPoint pjp,DelHsetItem anno) throws Throwable {
+  public Object dsetDelItemCommon(ProceedingJoinPoint pjp,HsetDelItem anno) throws Throwable {
     String key = null;
     String field = null;
-    anno = AnnotationUtils.getAnnotation(anno,anno.getClass());
-    Object[] args = pjp.getArgs();
-    key = AspectUtils.parseKey(anno.cacheKey(),AspectUtils.getMethod(pjp),args);
-    if(key == null){
-      throw new IllegalArgumentException("cacheKey cannot be null ");
+    Object result;
+    String latchId = null;
+    try {
+      anno = AnnotationUtils.getAnnotation(anno,anno.getClass());
+      Triple<Object[], Method, String> triple = resolve(pjp, anno.cacheKey());
+      Object[] args = triple.getLeft();
+      Method jpMethod = triple.getMiddle();
+      key = triple.getRight();
+
+      field = AspectUtils.parseKey(anno.field(), jpMethod,args);
+      Assert.notNull(key,"field cannot be null");
+
+      latchId = getLatch(key + ":" + field);
+      redisService.hsetDelItem(key,field);
+      logger.debug("delete hset item from db, redis key:" + key + ", field:" + field);
+      result = pjp.proceed();
+      logger.debug("run jpMethod: " + jpMethod.getName() + "by @HsetDelItem");
+    } finally {
+      releaseLatch(key + ":" + field,latchId);
     }
-    field = AspectUtils.parseKey(anno.field(),AspectUtils.getMethod(pjp),args);
-    redisService.hsetDelItem(key,field);
-    return pjp.proceed();
+
+    return result;
+  }
+
+  @Around("@annotation(anno)")
+  public Object hsetPutItemCommon(ProceedingJoinPoint pjp,HsetPutItem anno) throws Throwable {
+    String key = null;
+    String field = null;
+    Object result;
+    String latchId = null;
+    try {
+      anno = AnnotationUtils.getAnnotation(anno,anno.getClass());
+      Triple<Object[], Method, String> triple = resolve(pjp, anno.cacheKey());
+      Object[] args = triple.getLeft();
+      Method jpMethod = triple.getMiddle();
+      key = triple.getRight();
+      field = AspectUtils.parseKey(anno.field(), jpMethod,args);
+      Assert.notNull(key,"field cannot be null");
+      Object hsetItem = AspectUtils.parseKey(anno.hsetItemEl(), jpMethod,args,Object.class);
+
+      latchId = getLatch(key + ":" + field);
+      redisService.hsetPut(key,field,hsetItem);
+      logger.debug("put hset item to redis, redis key:" + key + ", field:" + field);
+
+      result = pjp.proceed();
+      logger.debug("run jpMethod: " + jpMethod.getName() + "by @HsetPutItem");
+    } finally {
+      releaseLatch(key + ":" + field,latchId);
+    }
+
+    return result;
   }
 
   private String getLatch(String key){
-    return DistributedServiceLatchArbitrator.apply().grabLatch(key);
+    return latchArbitrator.grabLatch(key);
   }
 
   private void releaseLatch(String key,String latchId){
     if(latchId != null){
-      DistributedServiceLatchArbitrator.apply().releaseLatch(key,latchId);
+      latchArbitrator.releaseLatch(key,latchId);
     }
   }
+
+  /**
+   * 解析出切面方法中必须的参数
+   */
+  private Triple<Object[],Method,String> resolve(ProceedingJoinPoint pjp,String keySpEl){
+    Object[] args = pjp.getArgs();
+    Method jpMethod = AspectUtils.getMethod(pjp);
+    String key = AspectUtils.parseKey(keySpEl, jpMethod,args);
+    Assert.notNull(key,"cacheKey cannot be null ");
+    return Triple.of(args,jpMethod,key);
+  }
+
 }

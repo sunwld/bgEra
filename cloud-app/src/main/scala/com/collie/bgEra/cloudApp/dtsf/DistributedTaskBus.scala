@@ -6,4 +6,8 @@ trait DistributedTaskBus{
 
   def runBus(): Unit
 
+  def startScheduler(): Unit
+
+  def stopScheduler(): Unit
+
 }

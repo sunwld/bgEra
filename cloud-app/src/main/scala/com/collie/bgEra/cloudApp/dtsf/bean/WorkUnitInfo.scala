@@ -12,6 +12,8 @@ import scala.beans.BeanProperty
   * 以及WORKUNIT相关的SPRING BEAN的名称，这些WORKUNIT BEAN必须实现了WORKUNITRUNABLE接口
   */
 class WorkUnitInfo {
+  @BeanProperty var taskName: String = _
+
   @BeanProperty var workUnitName: String = _
 
   @BeanProperty var targetId: String = _
@@ -22,7 +24,10 @@ class WorkUnitInfo {
 
   @BeanProperty var thisTime: Date = _
 
-  @BeanProperty var runResult: String = _
+  @BeanProperty var status: String = _
 
   @BeanProperty var errors: Long = _
+
+
+  override def toString = s"WorkUnitInfo(taskName=$taskName, workUnitName=$workUnitName, targetId=$targetId, runOrder=$runOrder, springBeanName=$springBeanName, thisTime=$thisTime, status=$status, errors=$errors)"
 }

@@ -12,14 +12,9 @@ import org.slf4j.{Logger, LoggerFactory}
 import scala.collection.mutable
 import scala.collection.JavaConversions._
 
-class ZookeeperDriver {
+class ZookeeperSession private(val zkUrl: String, val sessionTimeout: Int) {
   private var logger: Logger = LoggerFactory.getLogger("appm")
-  //    def apply: ZookeeperDriver = new ZookeeperDriver()
   private var zk: ZooKeeper = _
-  var zkUrl: String = _
-
-  var connectedSignal: CountDownLatch = _
-  val SESSION_TIMEOUT = 5000
 
   val RETRY_INTERVAL = 500
   val MAX_RETRY_TIMES = 10
@@ -241,27 +236,31 @@ class ZookeeperDriver {
     zk.getSessionId
   }
 
-  def connectZK(zkUrl: String): Unit = {
-    this.zkUrl = zkUrl
+  def connectZK(): Unit = {
     if (zk == null || !zk.getState.isConnected) {
       this.synchronized {
         if (zk == null || !zk.getState.isConnected) {
-          connectedSignal = new CountDownLatch(1)
-          zk = new ZooKeeper(zkUrl, SESSION_TIMEOUT, ConnectionWatcher(connectedSignal))
+          var connectedSignal: CountDownLatch = new CountDownLatch(1)
+          zk = new ZooKeeper(zkUrl, sessionTimeout, ConnectionWatcher(connectedSignal,this))
           connectedSignal.await()
         }
       }
     }
   }
 
-  def connectZK(): Unit = {
-    connectZK(this.zkUrl)
-  }
-
   def close() = {
     zk.close()
     zk = null
   }
+}
+
+object ZookeeperSession{
+  def apply(zkUrl: String, sessionTimeout: Int = 5000): ZookeeperSession ={
+    val session = new ZookeeperSession(zkUrl,sessionTimeout)
+    session.connectZK()
+    session
+  }
+
 }
 
 

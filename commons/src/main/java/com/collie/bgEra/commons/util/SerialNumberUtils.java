@@ -56,6 +56,16 @@ public class SerialNumberUtils {
             return DateUtils.dateFormat(serialNo + "0", dateFormatStr);
     }
 
+    public static Date getDateTimeByTrunc10s(Date date, Boolean fillZero) {
+        String str = getSerialByTrunc10s(date,fillZero);
+        return getDateTimeBySerialTrunc10s(str,fillZero);
+    }
+
+    public static Date getDateTimeByTrunc10s(Date date) {
+        String str = getSerialByTrunc10s(date,true);
+        return getDateTimeBySerialTrunc10s(str,true);
+    }
+
     /**
      * @param fillZero
      * @return 20180629124536 -> 20180629124500 or 201806291245
@@ -84,6 +94,16 @@ public class SerialNumberUtils {
             return DateUtils.dateFormat(serialNo, dateFormatStr);
         else
             return DateUtils.dateFormat(serialNo + "00", dateFormatStr);
+    }
+
+    public static Date getDateTimeByTrunc1min(Date date, Boolean fillZero) {
+        String str = getSerialByTrunc1min(date,fillZero);
+        return getDateTimeBySerialTrunc1min(str,fillZero);
+    }
+
+    public static Date getDateTimeByTrunc1min(Date date) {
+        String str = getSerialByTrunc1min(date,true);
+        return getDateTimeBySerialTrunc1min(str,true);
     }
 
     /**
@@ -118,6 +138,17 @@ public class SerialNumberUtils {
             return DateUtils.dateFormat(serialNo + "000", dateFormatStr);
     }
 
+    public static Date getDateTimeBySerialTrunc10min(Date date, Boolean fillZero) {
+        String str = getSerialByTrunc10min(date,fillZero);
+        return getDateTimeBySerialTrunc10min(str,fillZero);
+    }
+
+    public static Date getDateTimeBySerialTrunc10min(Date date) {
+        String str = getSerialByTrunc10min(date,true);
+        return getDateTimeBySerialTrunc10min(str,true);
+    }
+
+
     /**
      * @param fillZero
      * @return date -> 20180629120000 or 2018062912
@@ -146,6 +177,16 @@ public class SerialNumberUtils {
             return DateUtils.dateFormat(serialNo, dateFormatStr);
         else
             return DateUtils.dateFormat(serialNo + "0000", dateFormatStr);
+    }
+
+    public static Date getDateTimeBySerialTrunc1h(Date date, Boolean fillZero) {
+        String str = getSerialByTrunc1h(date,fillZero);
+        return getDateTimeBySerialTrunc1h(str,fillZero);
+    }
+
+    public static Date getDateTimeBySerialTrunc1h(Date date) {
+        String str = getSerialByTrunc1h(date,true);
+        return getDateTimeBySerialTrunc1h(str,true);
     }
 
     /**
@@ -180,6 +221,16 @@ public class SerialNumberUtils {
             return DateUtils.dateFormat(serialNo + "000000", dateFormatStr);
     }
 
+    public static Date getDateTimeBySerialTrunc1d(Date date, Boolean fillZero) {
+        String str = getSerialByTrunc1d(date,fillZero);
+        return getDateTimeBySerialTrunc1d(str,fillZero);
+    }
+
+    public static Date getDateTimeBySerialTrunc1d(Date date) {
+        String str = getSerialByTrunc1d(date,true);
+        return getDateTimeBySerialTrunc1d(str,true);
+    }
+
     /**
      *
      * @param fillZero
@@ -212,6 +263,16 @@ public class SerialNumberUtils {
             return DateUtils.dateFormat(serialNo + "01000000", dateFormatStr);
     }
 
+    public static Date getDateTimeBySerialTrunc1mon(Date date, Boolean fillZero) {
+        String str = getSerialByTrunc1mon(date,fillZero);
+        return getDateTimeBySerialTrunc1mon(str,fillZero);
+    }
+
+    public static Date getDateTimeBySerialTrunc1mon(Date date) {
+        String str = getSerialByTrunc1mon(date,true);
+        return getDateTimeBySerialTrunc1mon(str,true);
+    }
+
     /**
      *
      * @param fillZero
@@ -242,6 +303,16 @@ public class SerialNumberUtils {
             return DateUtils.dateFormat(serialNo, dateFormatStr);
         else
             return DateUtils.dateFormat(serialNo + "0101000000", dateFormatStr);
+    }
+
+    public static Date getDateTimeBySerialTrunc1y(Date date, Boolean fillZero) {
+        String str = getSerialByTrunc1y(date,fillZero);
+        return getDateTimeBySerialTrunc1y(str,fillZero);
+    }
+
+    public static Date getDateTimeBySerialTrunc1y(Date date) {
+        String str = getSerialByTrunc1y(date,true);
+        return getDateTimeBySerialTrunc1y(str,true);
     }
 
 //    public static void main(String[] args) {

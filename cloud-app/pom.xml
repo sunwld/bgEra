@@ -66,14 +66,17 @@
 
   </dependencies>
 
-  <build>
+  <!--<build>
     <plugins>
-      <plugin>
+      &lt;!&ndash;<plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-jar-plugin</artifactId>
         <version>${maven-jar-plugin.version}</version>
-      </plugin>
+      </plugin>&ndash;&gt;
+
     </plugins>
-  </build>
+  </build>-->
+
+
 
 </project>

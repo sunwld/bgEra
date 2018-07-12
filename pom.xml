@@ -61,7 +61,6 @@
         <module>consumer</module>
         <module>zuulRoute</module>
         <module>cloud-app</module>
-        <module>wfWeb</module>
     </modules>
 
     <dependencyManagement>
@@ -176,7 +175,7 @@
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-test</artifactId>
-            <scope>test</scope>
+            <!--<scope>test</scope>-->
         </dependency>
         <!-- scala  -->
         <dependency>
@@ -193,7 +192,7 @@
                 <artifactId>scala-maven-plugin</artifactId>
                 <version>${scala-maven-plugin.version}</version>
                 <executions>
-                   <execution>
+                    <execution>
                         <id>scala-compile-first</id>
                         <phase>process-resources</phase>
                         <goals>

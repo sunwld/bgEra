@@ -9,17 +9,7 @@ import java.lang.annotation.*;
 @Target({ElementType.METHOD})
 @Retention(RetentionPolicy.RUNTIME)
 @Documented
-public @interface PopZsetByIndex {
+public @interface HsetGetItem {
   String cacheKey();
-
-  long minIndex() default Integer.MIN_VALUE;
-
-  long maxIndex()default Integer.MAX_VALUE;
-
-  String minIndexSpEl() default "";
-
-  String maxIndexSpEl() default "";
-
-  boolean reverse() default false;
-
+  String field();
 }

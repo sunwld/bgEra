@@ -2,7 +2,7 @@ package com.collie.bgEra.cloudApp.appm.conf
 
 import com.collie.bgEra.cloudApp.CloudAppContext
 import com.collie.bgEra.cloudApp.appm.{AppManagerStandardSkill, ZApplicationManager}
-import com.collie.bgEra.cloudApp.base.{BaseConf, ZookeeperDriver}
+import com.collie.bgEra.cloudApp.base.{BaseConf, ZookeeperSession}
 import com.collie.bgEra.cloudApp.dsla.DistributedServiceLatchArbitrator
 import com.collie.bgEra.cloudApp.redisCache.conf.RedisCacheConf
 import org.springframework.beans.factory.annotation.{Autowired, Qualifier, Value}
@@ -36,6 +36,8 @@ class AppmConf {
     ZApplicationManager()
   }
 
-
-
+  @Bean(name = Array("appmZkSession"))
+  def getZkDriver(@Qualifier("zkUrl") zkUrl: String): ZookeeperSession = {
+    ZookeeperSession(zkUrl)
+  }
 }

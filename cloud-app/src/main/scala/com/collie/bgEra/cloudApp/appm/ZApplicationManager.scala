@@ -3,7 +3,7 @@ package com.collie.bgEra.cloudApp.appm
 import java.util
 
 import com.collie.bgEra.cloudApp.appm.watchers.{ClusterStatusWatcher, ClusterVersionWatcher, PreNodeWatcher, VoteNodeWatcher}
-import com.collie.bgEra.cloudApp.base.ZookeeperDriver
+import com.collie.bgEra.cloudApp.base.ZookeeperSession
 import com.collie.bgEra.cloudApp.utils.ContextHolder
 import org.apache.zookeeper.{CreateMode, KeeperException}
 import org.slf4j.{Logger, LoggerFactory}
@@ -19,7 +19,7 @@ class ZApplicationManager private(
 
 
   private val logger: Logger = LoggerFactory.getLogger("appm")
-  private var zookeeperDriver: ZookeeperDriver = ContextHolder.getBean(classOf[ZookeeperDriver])
+  private var zkSession: ZookeeperSession = ContextHolder.getBean("appmZkSession")
   private val MAX_RETRY_TIMES_PER_MIN: Int = 5
   private val RETRY_INTERVAL_SECONDS: Int = 1
   private var retry_times = 0
@@ -40,6 +40,7 @@ class ZApplicationManager private(
   def recoverFromFatalError(fatalException: AppClusterFatalException, retryTimes: Int = MAX_RETRY_TIMES_PER_MIN): String = {
     appSuspend()
     try {
+      disconnectFromZk()
       implementZManagement()
     } catch {
       case ex: AppClusterFatalException => {
@@ -92,7 +93,7 @@ class ZApplicationManager private(
   }
 
   def implementZManagement(): String = {
-    if(zookeeperDriver == null) {
+    if(zkSession == null) {
       logger.error(s"There is no ZookeeperDriver in spring,check your spring config.")
       throw new IllegalArgumentException("There is no ZookeeperDriver in spring,check your spring config.")
     }
@@ -101,7 +102,7 @@ class ZApplicationManager private(
       logger.info(s"implementZManagement:conn zk,create vote,watchnode,watchstatus,watchcluster")
 
       //
-      while (!zookeeperDriver.isConnected()) {
+      while (!zkSession.isConnected()) {
         Thread.sleep(3000)
       }
 
@@ -135,17 +136,17 @@ class ZApplicationManager private(
     votePath = s"$rootPath/vote"
     clusterVersionPath = s"$rootPath/clusterVersion"
 
-    zookeeperDriver.createNode(projectPath, "", CreateMode.PERSISTENT)
-    zookeeperDriver.createNode(rootPath, "", CreateMode.PERSISTENT)
-    zookeeperDriver.createNode(votePath, "", CreateMode.PERSISTENT)
-    zookeeperDriver.createNode(clusterVersionPath, "1", CreateMode.PERSISTENT)
+    zkSession.createNode(projectPath, "", CreateMode.PERSISTENT)
+    zkSession.createNode(rootPath, "", CreateMode.PERSISTENT)
+    zkSession.createNode(votePath, "", CreateMode.PERSISTENT)
+    zkSession.createNode(clusterVersionPath, "1", CreateMode.PERSISTENT)
 
-    val voters: mutable.Seq[String] = zookeeperDriver.getChildren(votePath)
+    val voters: mutable.Seq[String] = zkSession.getChildren(votePath)
     val currVoters: mutable.Seq[String] =
-      voters.filter(_.startsWith(s"${zookeeperDriver.getSessionId()}$voteSplit"))
+      voters.filter(_.startsWith(s"${zkSession.getSessionId()}$voteSplit"))
     if (currVoters.size == 0) {
-      this.clusterInfo.currentVotid = zookeeperDriver.createNode(
-        s"$votePath/${zookeeperDriver.getSessionId()}$voteSplit",
+      this.clusterInfo.currentVotid = zkSession.createNode(
+        s"$votePath/${zkSession.getSessionId()}$voteSplit",
         voteNodeValue, CreateMode.EPHEMERAL_SEQUENTIAL)
       this.clusterInfo.currentVotid = this.clusterInfo.currentVotid.replace(s"$votePath/", "")
     }
@@ -158,7 +159,7 @@ class ZApplicationManager private(
 
   def getVoteResult(): (String, String) = {
     val mySeq = this.clusterInfo.currentVotid.split(voteSplit)(1)
-    val voters: mutable.Seq[String] = zookeeperDriver.getChildren(votePath)
+    val voters: mutable.Seq[String] = zkSession.getChildren(votePath)
     val sortedVoters = voters.sortBy(_.split(voteSplit)(1))
 
     if (mySeq == sortedVoters(0).split(voteSplit)(1)) {
@@ -177,12 +178,12 @@ class ZApplicationManager private(
     getVoteResult()
     if (voterPlace._1.equals(MASTER)) {
       logger.info(s"watchVoteNode:i am  master.place:$voterPlace")
-      this.clusterInfo.clusterVotids = zookeeperDriver.getChildrenAndWatch(votePath, VoteNodeWatcher)
+      this.clusterInfo.clusterVotids = zkSession.getChildrenAndWatch(votePath, VoteNodeWatcher)
       this.clusterInfo.clusterVotids
     } else {
       logger.info(s"watchVoteNode:i am  salve.place:$voterPlace")
       try {
-        val res = zookeeperDriver.existsAndWatch(voterPlace._2, PreNodeWatcher)
+        val res = zkSession.existsAndWatch(voterPlace._2, PreNodeWatcher)
         if (res == null) {
           watchVoteNode()
           logger.info(s"watchVoteNode:Warining:Prev Node is not exists, will getVoteResult() and retry!")
@@ -203,30 +204,30 @@ class ZApplicationManager private(
   }
 
   def watchStatusNode() = {
-    zookeeperDriver.existsAndWatch(clusterStatusPath, ClusterStatusWatcher)
+    zkSession.existsAndWatch(clusterStatusPath, ClusterStatusWatcher)
   }
 
   def acvtiveCluster() = {
-    zookeeperDriver.createNode(clusterStatusPath, "", CreateMode.EPHEMERAL)
+    zkSession.createNode(clusterStatusPath, "", CreateMode.EPHEMERAL)
   }
 
   def inAcvtiveCluster() = {
-    zookeeperDriver.deleteNode(clusterStatusPath)
+    zkSession.deleteNode(clusterStatusPath)
   }
 
   def watchClusterVersion() = {
-    zookeeperDriver.getDataAndWatch(clusterVersionPath,
+    zkSession.getDataAndWatch(clusterVersionPath,
       ClusterVersionWatcher)
   }
 
   def incrClusterVersion() = {
-    var versionStr = zookeeperDriver.getData(clusterVersionPath)
+    var versionStr = zkSession.getData(clusterVersionPath)
     var newVersion = versionStr.toInt + 1
-    zookeeperDriver.setData(clusterVersionPath, newVersion.toString())
+    zkSession.setData(clusterVersionPath, newVersion.toString())
   }
 
   def getClusterStatus() = {
-    val stat = zookeeperDriver.exists(clusterStatusPath)
+    val stat = zkSession.exists(clusterStatusPath)
     if (stat == null) {
       "INACTIVE"
     } else {
@@ -274,6 +275,10 @@ class ZApplicationManager private(
     } catch {
       case ex: Exception => throw new AppClusterFatalException("",ex)
     }
+  }
+
+  def disconnectFromZk(): Unit ={
+    zkSession.close()
   }
 }
 

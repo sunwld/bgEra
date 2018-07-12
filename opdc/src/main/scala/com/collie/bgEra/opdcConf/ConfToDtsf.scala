@@ -4,7 +4,6 @@ import java.util
 import java.util.Properties
 
 import com.alibaba.druid.pool.DruidDataSource
-import com.collie.bgEra.cloudApp.appm.conf.AppmContext
 import com.collie.bgEra.cloudApp.dtsf.conf.DtsfConf
 import org.springframework.boot.autoconfigure.EnableAutoConfiguration
 import org.springframework.context.annotation.{Bean, Configuration, Import}
@@ -26,9 +25,6 @@ class ConfToDtsf {
     dataSource.configFromPropety(connPros)
     dataSource
   }
-
-  @Bean(Array("appmContext"))
-  def getAppmContext = AppmContext("test","133.96.6.1:2181,133.96.6.2:2181,133.96.6.3:2181",2,3)
 
   @Bean(Array("jedisCluster"))
   def jedisCluster: JedisCluster = {

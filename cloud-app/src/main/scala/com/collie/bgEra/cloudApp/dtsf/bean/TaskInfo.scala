@@ -11,7 +11,7 @@ class TaskInfo {
 
   @BeanProperty var description: String = _
 
-  @BeanProperty var workUnitList: List[WorkUnitInfo] = _
+  @BeanProperty var workUnitList: java.util.List[String] = _
 
   @BeanProperty var taskSchedulerBean: String = _
 
@@ -27,6 +27,5 @@ class TaskInfo {
 
   @BeanProperty var nextTime: Date = _
 
-
-  override def toString = s"TaskInfo($taskName, $targetId, $description, $workUnitList, $taskSchedulerBean, $taskThreadPoolName, $status, $runResult, $errors, $thisTime, $nextTime)"
+  override def toString = s"TaskInfo(taskName=$taskName, targetId=$targetId, description=$description, workUnitList=$workUnitList, taskSchedulerBean=$taskSchedulerBean, taskThreadPoolName=$taskThreadPoolName, status=$status, runResult=$runResult, errors=$errors, thisTime=$thisTime, nextTime=$nextTime)"
 }

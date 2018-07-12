@@ -9,7 +9,7 @@ import java.lang.annotation.*;
 @Target({ElementType.METHOD})
 @Retention(RetentionPolicy.RUNTIME)
 @Documented
-public @interface PopZsetByScore {
+public @interface ZsetPopByScore {
   String cacheKey();
 
   double minScore() default Double.MIN_VALUE;

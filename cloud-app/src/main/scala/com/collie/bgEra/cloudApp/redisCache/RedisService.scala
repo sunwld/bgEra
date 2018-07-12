@@ -154,12 +154,17 @@ class RedisService {
     * @return
     */
   def addZsetItemsAndTrimByIndex(key: String, item: ju.List[ZSetItemBean], records: Long, expireTime: Int = -1,reverse:Boolean = false): Long={
-    addZsetItems(key,item,expireTime)
-    if(reverse){
-      zsetRevTrimByIndex(key,0,records-1)
-    }else{
-      zsetTrimByIndex(key,0,records-1)
+    val addCount = addZsetItems(key,item,expireTime)
+    var maxIndex: Long = records match {
+      case i if i > 0 => i - 1
+      case _ => -1
     }
+    if(reverse){
+      zsetRevTrimByIndex(key,0,maxIndex)
+    }else{
+      zsetTrimByIndex(key,0,maxIndex)
+    }
+    addCount
   }
 
   /**
@@ -226,7 +231,7 @@ class RedisService {
         delCount += jedis.zremrangeByRank(key, (maxIndex + 1), -1)
       }
     }
-    jedis.zrange(key,0,-1).foreach(println)
+
     delCount
   }
 
@@ -249,8 +254,14 @@ class RedisService {
   }
 
   def hsetGet(key: String, field: String) : Any ={
-    val bytes = jedis.hget(strSerializer.serialize(key),strSerializer.serialize(field))
-    kryoUtil.readFromByteArray(bytes)
+    val k = strSerializer.serialize(key)
+    val f = strSerializer.serialize(field)
+    val bytes = jedis.hget(k,f)
+    if(bytes != null){
+      kryoUtil.readFromByteArray(bytes)
+    }else{
+      null
+    }
   }
 
   def hsetDelItem(key: String, field: String) = {
@@ -285,5 +296,10 @@ class RedisService {
 
   def hasKey(key: String): Boolean = {
     jedis.exists(strSerializer.serialize(key))
+  }
+  def hexists(key: String,field: String): Boolean = {
+    val k = strSerializer.serialize(key)
+    val f = strSerializer.serialize(field)
+    jedis.hexists(k,f)
   }
 }

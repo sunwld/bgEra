@@ -9,7 +9,11 @@ import java.lang.annotation.*;
 @Target({ElementType.METHOD})
 @Retention(RetentionPolicy.RUNTIME)
 @Documented
-public @interface GetHsetItem {
+public @interface HsetPutItem {
   String cacheKey();
+
   String field();
+
+  String hsetItemEl();
+
 }

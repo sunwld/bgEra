@@ -9,7 +9,7 @@ import java.lang.annotation.*;
 @Target({ElementType.METHOD})
 @Retention(RetentionPolicy.RUNTIME)
 @Documented
-public @interface WeedoutZsetByIndex {
+public @interface ZsetWeedoutByIndex {
   String cacheKey();
 
   String addRecords();

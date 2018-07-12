@@ -3,6 +3,8 @@ package com.collie.bgEra.commons.util;
 
 import org.springframework.beans.factory.config.PropertiesFactoryBean;
 import org.springframework.core.io.ClassPathResource;
+import org.springframework.core.io.Resource;
+import org.springframework.core.io.support.PathMatchingResourcePatternResolver;
 
 import java.io.IOException;
 import java.util.Properties;
@@ -42,7 +44,7 @@ public class CommonUtils {
     public static Properties readPropertiesFile(String path) throws IOException {
         PropertiesFactoryBean propertiesFactoryBean = new PropertiesFactoryBean();
         propertiesFactoryBean.setLocation(new ClassPathResource(path));
-        //在quartz.properties中的属性被读取并注入后再初始化对象
+        //在properties中的属性被读取并注入后再初始化对象
         propertiesFactoryBean.afterPropertiesSet();
         return propertiesFactoryBean.getObject();
     }
