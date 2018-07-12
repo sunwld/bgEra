@@ -12,12 +12,16 @@ import java.{util => ju}
 
 import scala.collection.JavaConversions._
 import scala.collection.mutable
+import scala.collection.mutable.ListBuffer
 
 @Repository
 class TaskMapper {
   @Autowired
   @Qualifier("mainSqlSessionFactory")
   private val factory: SqlSessionFactory = null
+
+  @Autowired
+  val redisService: RedisService = null
 
   private val NAMESPACE:String = "com.collie.bgEra.cloudApp.dtsf.mapper.TaskMapper"
 
@@ -34,7 +38,6 @@ class TaskMapper {
     }catch {
       case e:Exception => {
         session.rollback()
-        e.printStackTrace()
         throw e
       }
     }finally {
@@ -57,7 +60,6 @@ class TaskMapper {
     }catch {
       case e:Exception => {
         session.rollback()
-        e.printStackTrace()
         throw e
       }
     } finally {
@@ -97,7 +99,7 @@ class TaskMapper {
     }
   }
 
-  @ZsetPopByScore(cacheKey = "'bgEra.dtsf.myTaskZset.'+#zkSessionId",maxScoreSpEl = "#now")
+  @ZsetPopByScore(cacheKey = "'bgEra.cloudApp.dtsf.myTaskZset.'+#zkSessionId",maxScoreSpEl = "#now")
   def qryPerpredTaskListByTargets(zkSessionId: String,targetList: util.List[String],now: Double) : util.List[ZSetItemBean] ={
     val sql = NAMESPACE+".qryPerpredTaskListByTargets"
     var session: SqlSession = null
@@ -189,7 +191,6 @@ class TaskMapper {
     } catch {
       case e:Exception => {
         session.rollback()
-        e.printStackTrace()
         throw e
       }
     } finally {
@@ -210,7 +211,6 @@ class TaskMapper {
     }catch {
       case e:Exception => {
         session.rollback()
-        e.printStackTrace()
         throw e
       }
     } finally {
@@ -220,7 +220,7 @@ class TaskMapper {
     }
   }
 
-  @ZsetWeedoutByIndex(cacheKey = "'bgEra.dtsf.myTaskZset.'+#zkSessionId",addRecords = "#zsetList",keepRecords = -1)
+  @ZsetWeedoutByIndex(cacheKey = "'bgEra.cloudApp.dtsf.myTaskZset.'+#zkSessionId",addRecords = "#zsetList",keepRecords = -1)
   def giveBackTaskZsetList(zkSessionId: String, zsetList: ju.List[ZSetItemBean]): Unit ={
 
   }
@@ -235,7 +235,28 @@ class TaskMapper {
     }catch {
       case e:Exception => {
         session.rollback()
-        e.printStackTrace()
+        throw e
+      }
+    }finally {
+      if(session != null){
+        session.close()
+      }
+    }
+  }
+
+  def flushDtsfRedisCache(): Unit ={
+    val sql = NAMESPACE + ".qryAllZkSessionId"
+    var session: SqlSession = null
+    try{
+      session = factory.openSession(false)
+      val keys: Array[String] = Array("bgEra.cloudApp.dtsf.allZkSessionInfo",
+            "bgEra.cloudApp.dtsf.allShardTargetInfo","bgEra.cloudApp.dtsf.TargetHset",
+            "bgEra.cloudApp.dtsf.taskMap","bgEra.cloudApp.dtsf.workUnitMap")
+      val zkSessionIdList: ju.List[String] = session.selectList(sql)
+      zkSessionIdList.foreach(sessionId => redisService.delKey(s"bgEra.cloudApp.dtsf.myTaskZset.${sessionId}"))
+      keys.foreach(redisService.delKey(_))
+    }catch {
+      case e:Exception => {
         throw e
       }
     }finally {

@@ -1,6 +1,6 @@
 package com.collie.bgEra.cloudApp.dtsf.impl
 
-import com.collie.bgEra.cloudApp.dtsf.{TaskManager, TaskSchedule}
+import com.collie.bgEra.cloudApp.dtsf.{TaskManager, TaskSchedule, WorkUnitRunable}
 import com.collie.bgEra.cloudApp.dtsf.bean._
 import com.collie.bgEra.cloudApp.dtsf.mapper.TaskMapper
 import com.collie.bgEra.cloudApp.redisCache.bean.ZSetItemBean
@@ -19,8 +19,6 @@ import scala.collection.JavaConversions._
 
 @Component
 class TaskManagerImpl extends TaskManager{
-  var runCount = 0
-  var giveBackCount = 0
   private val logger: Logger = LoggerFactory.getLogger("dtsf")
 
   @Autowired
@@ -50,16 +48,12 @@ class TaskManagerImpl extends TaskManager{
     //用于记录此次task执行过程中，失败的workUnit的数量
     var exceptionUnitSize = 0
     val nextTimeSched: TaskSchedule = ContextHolder.getBean(taskInfo.taskSchedulerBean)
-    this.synchronized{
-      runCount+=1
-    }
+
     try {
       //如果当前task是running状态，则修改task状态，并跳过此次执行
       if("RUNNING".equals(taskInfo.status)){
-        logger.info("RUNNING and skip",taskInfo)
         return
       }else if(taskInfo.nextTime.after(new ju.Date()) && "WAITING".equals(taskInfo.status)){
-        logger.info("time and skip",taskInfo)
         return
       }
 
@@ -112,6 +106,7 @@ class TaskManagerImpl extends TaskManager{
       try {
         taskInfo.status = "WAITING"
         taskInfo.nextTime = nextTimeSched.getNextRunTime(new ju.Date())
+        taskInfo.thisTime = null
         taskInfo.errors = exceptionUnitSize match {
           case 0 => 0
           case _ => taskInfo.errors + exceptionUnitSize
@@ -131,9 +126,6 @@ class TaskManagerImpl extends TaskManager{
           }
         }
       } finally {
-        this.synchronized{
-          giveBackCount+=1
-        }
         //将task重新放入到缓存中
         taskMapper.giveBackTaskZsetList(context.appmClusterInfo.currentVotid,
           ju.Arrays.asList(ZSetItemBean(taskInfo.targetId + "||" + taskInfo.taskName,taskInfo.nextTime.getTime())))
@@ -143,8 +135,21 @@ class TaskManagerImpl extends TaskManager{
   }
 
   override def invokWorkUnit(workUnit: WorkUnitInfo): WorkUnitResult = {
-//    println(workUnit)
-    WorkUnitResult(WorkUnitResult.SUCCESS,"",null)
+    var unitResult = WorkUnitResult.SUCCESS
+    var ex: Exception = null;
+    var msg = ""
+    try{
+      val bean = ContextHolder.getBean(workUnit.springBeanName).asInstanceOf[WorkUnitRunable]
+      bean.runWork(workUnit)
+    }catch {
+      case e:Exception => {
+        logger.error(s"run workunit ${workUnit} failed !",e)
+        ex = e
+        unitResult = WorkUnitResult.EXCEPTION
+      }
+    }
+
+    WorkUnitResult(unitResult,msg,ex)
   }
 
   override def finishTask(taskResult: TaskResult, taskScheBeanNm: String): Unit = ???

@@ -17,11 +17,11 @@ class DSAZKNodeWatcher private() extends Watcher {
 
   override def process(event: WatchedEvent): Unit = {
     if (event.getType == EventType.NodeDeleted) {
-      latchBeanList.synchronized {
-        for(i<- 0 until latchBeanList.length){
+      this.synchronized {
+        while(latchBeanList.size > 0){
           val latch = latchBeanList.remove(0)
           latch.countDownLatch.countDown()
-          logger.info(s"wathed NodeDeleted: countdown latch:${latch.latchKey}")
+          logger.debug(s"wathed NodeDeleted: countdown latch:${latch.latchKey}")
         }
       }
     }
@@ -42,7 +42,7 @@ object DSAZKNodeWatcher {
       }
     }
 
-    dsaZKNodeWatcher.latchBeanList.synchronized {
+    dsaZKNodeWatcher.synchronized {
       dsaZKNodeWatcher.latchBeanList.append(new LatchBean(latchKey, countDownLatch))
     }
 

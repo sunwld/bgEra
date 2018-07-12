@@ -19,9 +19,6 @@ class ShardingManagerImpl extends ShardingManager{
   @Autowired
   private val taskMapper: TaskMapper = null
 
-  @Autowired(required = false)
-  val redisService: RedisService = null
-
   override def generateCurrentInstanceId: Long = ???
 
   override def queryShardingInfoByInstaceId(instId: Long): Unit = ???
@@ -31,7 +28,6 @@ class ShardingManagerImpl extends ShardingManager{
   override def reShardTargetsAfterLeaver(): Unit = ???
 
   override def  reshardTargets(zkSessionIds: mutable.Seq[String]) = {
-    redisService.delKeyByPattern("bgEra.cloudApp.dtsf.*")
     val dtsfTargList: mutable.Seq[TargetInfo] = taskMapper.qryAllTartInfo()
     val sharedTargetInfo: util.List[ShardingTarget] = new util.ArrayList[ShardingTarget]()
     val nodeCount = zkSessionIds.size
@@ -60,5 +56,7 @@ class ShardingManagerImpl extends ShardingManager{
     taskMapper.insertZkSessionInfo(clusterInfoList)
   }
 
-
+  override def flushCache(): Unit = {
+    taskMapper.flushDtsfRedisCache()
+  }
 }

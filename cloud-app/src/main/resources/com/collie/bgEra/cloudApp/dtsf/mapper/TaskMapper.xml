@@ -43,6 +43,10 @@
     </foreach>
   </insert>
 
+  <select id="qryAllZkSessionId" resultType="String">
+    SELECT sessionid FROM dtf_zksession
+  </select>
+
   <delete id="deleteAllZkSessionInfo">
     delete from dtf_zksession
   </delete>

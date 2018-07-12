@@ -34,21 +34,21 @@ class DistributedServiceLatchArbitrator private(val projectName: String) {
       latchId
     } catch {
       case ex: KeeperException.NodeExistsException => {
-        Thread.sleep((new util.Random).nextInt(100))
-        if(zkSession.exists(latchKeyPath) == null){
-          grabLatch(latchKey)
-        }else{
+        //Thread.sleep((new util.Random).nextInt(100))
+//        if(zkSession.exists(latchKeyPath) == null){
+//          grabLatch(latchKey)
+//        }else{
           val countDownLatch = new CountDownLatch(1)
           // node not exists
           if( zkSession.existsAndWatch(latchKeyPath,DSAZKNodeWatcher(countDownLatch,latchKeyPath)) == null ){
             grabLatch(latchKey)
           }else{
-            logger.info(latchKey+"will sleep for watcher")
+            logger.debug(latchKey+"will sleep for watcher")
             countDownLatch.await()
-            logger.info(latchKey+"end sleep")
+            logger.debug(latchKey+"end sleep")
             grabLatch(latchKey)
           }
-        }
+        //}
       }
     }
   }

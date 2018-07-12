@@ -47,8 +47,8 @@ class AppManagerStandardSkillImpl extends AppManagerStandardSkill {
 
   override def reallocation(clusterInfo: ClusterInfo): Unit = {
     logger.info(s"reallocation $clusterInfo")
-
     cloudAppContext.appmClusterInfo = clusterInfo
+    shardingManager.flushCache()
     shardingManager.saveZksessionInfo(clusterInfo)
     shardingManager.reshardTargets(clusterInfo.clusterVotids)
   }

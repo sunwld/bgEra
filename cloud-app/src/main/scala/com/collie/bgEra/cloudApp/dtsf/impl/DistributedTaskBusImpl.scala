@@ -34,10 +34,6 @@ class DistributedTaskBusImpl extends DistributedTaskBus {
     override def runBus(): Unit = {
         val taskList: util.List[TaskInfo] = taskManager.getPreparedTaskList(context.appmClusterInfo.currentVotid)
         logger.info("scanned " + taskList.size() + " task")
-        taskManager.synchronized{
-          println("runCount : " + taskManager.runCount)
-          println("giveBackCount : " + taskManager.giveBackCount)
-        }
         taskList.foreach(task => {
             val scheduler: Scheduler = getScheduler(task.taskThreadPoolName)
             fillScheduler(scheduler,task)

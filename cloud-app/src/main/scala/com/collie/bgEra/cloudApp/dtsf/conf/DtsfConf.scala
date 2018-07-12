@@ -1,24 +1,16 @@
 package com.collie.bgEra.cloudApp.dtsf.conf
 
-import java.net.URL
-import java.util.Properties
-
 import com.alibaba.druid.pool.DruidDataSource
 import com.collie.bgEra.cloudApp.appm.conf.AppmConf
-import com.collie.bgEra.cloudApp.base.BaseConf
 import com.collie.bgEra.cloudApp.dtsf.DistributedTaskBus
 import com.collie.bgEra.cloudApp.redisCache.conf.RedisCacheConf
 import com.collie.bgEra.commons.util.CommonUtils
 import org.mybatis.spring.SqlSessionFactoryBean
-import org.mybatis.spring.annotation.MapperScan
 import org.quartz.CronTrigger
 import org.springframework.beans.factory.annotation.{Autowired, Qualifier}
 import org.springframework.context.annotation.{Bean, ComponentScan, Configuration, Import}
 import org.springframework.core.io.support.PathMatchingResourcePatternResolver
-import org.springframework.scheduling.quartz.{CronTriggerFactoryBean, MethodInvokingJobDetailFactoryBean, SchedulerFactoryBean, SimpleTriggerFactoryBean}
-import org.springframework.beans.factory.config.PropertiesFactoryBean
-import org.springframework.core.io.{ClassPathResource, Resource, UrlResource}
-import redis.clients.jedis.JedisCluster
+import org.springframework.scheduling.quartz.{CronTriggerFactoryBean, MethodInvokingJobDetailFactoryBean, SchedulerFactoryBean}
 
 /**
   * Dtsf组件实现分布式任务调度，
@@ -51,17 +43,8 @@ class DtsfConf {
   def sqlSeesionFatory(): SqlSessionFactoryBean = {
     val sqlSessionFactoryBean = new SqlSessionFactoryBean
     sqlSessionFactoryBean.setDataSource(dtfsDataSource)
-    var resolver = new PathMatchingResourcePatternResolver()
-//    val resources: Array[Resource] = resolver.getResources("../mapper/*Mapper.xml")
-    println(this.getClass.getResource("/").getPath)
-    val resources = resolver.getResources("classpath*:*Mapper.xml")
-//    val resources = resources
-
-//    println("=========================" + resources.size)
-//    resources.foreach(r => {
-//      println("=========================" + r.getFilename())
-//      println("=========================" + r.exists())
-//    })
+    val resolver = new PathMatchingResourcePatternResolver()
+    val resources = resolver.getResources("classpath*:com/collie/bgEra/cloudApp/dtsf/mapper/*Mapper.xml")
     sqlSessionFactoryBean.setMapperLocations(resources)
     sqlSessionFactoryBean
   }

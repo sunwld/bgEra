@@ -7,6 +7,8 @@ import scala.collection.mutable
 
 trait ShardingManager {
 
+  def flushCache(): Unit
+
   def generateCurrentInstanceId: Long
 
   def queryShardingInfoByInstaceId(instId: Long): Unit
