@@ -4,7 +4,7 @@ import com.collie.bgEra.cloudApp.dtsf.{TaskManager, TaskSchedule, WorkUnitRunabl
 import com.collie.bgEra.cloudApp.dtsf.bean._
 import com.collie.bgEra.cloudApp.dtsf.mapper.TaskMapper
 import com.collie.bgEra.cloudApp.redisCache.bean.ZSetItemBean
-import org.springframework.beans.factory.annotation.Autowired
+import org.springframework.beans.factory.annotation.{Autowired, Qualifier}
 import org.springframework.stereotype.Component
 import java.{util => ju}
 
@@ -12,13 +12,14 @@ import com.collie.bgEra.cloudApp.CloudAppContext
 import com.collie.bgEra.cloudApp.redisCache.HsetDelItem
 import com.collie.bgEra.cloudApp.utils.ContextHolder
 import com.collie.bgEra.commons.util.DateUtils
+import org.apache.ibatis.session.{SqlSession, SqlSessionFactory}
 import org.slf4j.{Logger, LoggerFactory}
 
 import scala.collection.JavaConversions._
 
 
 @Component
-class TaskManagerImpl extends TaskManager{
+class TaskManagerImpl extends TaskManager {
   private val logger: Logger = LoggerFactory.getLogger("dtsf")
 
   @Autowired
@@ -27,54 +28,61 @@ class TaskManagerImpl extends TaskManager{
   @Autowired
   val context: CloudAppContext = null
 
-  override def getPreparedTaskList(zkSessionId: String): ju.List[TaskInfo] = {
-    val taskList: ju.List[TaskInfo] = new ju.ArrayList[TaskInfo]()
+  override def getPreparedTaskList(zkSessionId: String): ju.List[ZSetItemBean] = {
+    var preparedTask: ju.List[ZSetItemBean] = null
     //根据zkSessionid获取此zksessionid 分配到的targetList
     val targetSharding: ju.List[String] = taskMapper.getTargetShardingBySessionId(zkSessionId)
-    if(targetSharding != null && !targetSharding.isEmpty()){
+    if (targetSharding != null && !targetSharding.isEmpty()) {
       //查询出可被执行的taskId
-      val preparedTask: ju.List[ZSetItemBean] = taskMapper.qryPerpredTaskListByTargets(zkSessionId, targetSharding, System.currentTimeMillis())
-
-      //根据taskId,找到对应的TarkInfo对象
-      preparedTask.foreach(task => {
-        taskList.add(taskMapper.qryTaskInfoById(task.id))
-      })
+      val getTaskListBeginStamp = System.currentTimeMillis()
+      preparedTask = taskMapper.qryPerpredTaskListByTargets(zkSessionId, targetSharding, System.currentTimeMillis())
+      val getTaskListLong = System.currentTimeMillis() - getTaskListBeginStamp
+      logger.debug(s"qryPerpredTaskListByTargets elapse $getTaskListLong ms.")
     }
-    taskList
+    preparedTask
   }
 
-  override def runTask(taskInfo: TaskInfo): Unit = {
+  @Autowired
+  @Qualifier("bgEra_dtsf_SqlSessionFactory")
+  private val factory: SqlSessionFactory = null
 
+  override def runTask(taskInfo: TaskInfo): Unit = {
     //用于记录此次task执行过程中，失败的workUnit的数量
     var exceptionUnitSize = 0
     val nextTimeSched: TaskSchedule = ContextHolder.getBean(taskInfo.taskSchedulerBean)
 
+    var session: SqlSession = null
     try {
+      session = factory.openSession(false)
+
       //如果当前task是running状态，则修改task状态，并跳过此次执行
-      if("RUNNING".equals(taskInfo.status)){
+      if ("RUNNING".equals(taskInfo.status)) {
         return
-      }else if(taskInfo.nextTime.after(new ju.Date()) && "WAITING".equals(taskInfo.status)){
+      } else if (taskInfo.nextTime.after(new ju.Date()) && "WAITING".equals(taskInfo.status)) {
         return
       }
 
       //修改task状态为running，并保存
       taskInfo.thisTime = new ju.Date()
       taskInfo.status = "RUNNING"
-      taskMapper.updateTaskInfo(taskInfo)
+      taskMapper.updateTaskInfo(taskInfo, session)
 
       //遍历task中的workUnit，并执行
-      val workUnitNames = taskInfo.workUnitList
+      val workUnitIds = taskInfo.workUnitList
       var unitResult: WorkUnitResult = null
-      workUnitNames.foreach(unitName => {
+      workUnitIds.foreach(unitId => {
         //根据 targetId, taskName,unitName查询出对应的 workUnit对象
-        val unit = taskMapper.qryWorkUnitInfoById(s"${taskInfo.targetId}||${taskInfo.taskName}||${unitName}")
+        val unit = taskMapper.qryWorkUnitInfoById(unitId,session)
         //修改workUnit状态为running，并保存
         unit.thisTime = new ju.Date()
         unit.status = "RUNNING"
-        taskMapper.updateWorkUnitInfo(unit)
+        taskMapper.updateWorkUnitInfo(unit,session)
 
         //执行workunit
+        val invokWorkUnitTimeStamp :Long = System.currentTimeMillis()
         unitResult = invokWorkUnit(unit)
+        val invokWorkUnitLong :Long =  System.currentTimeMillis() - invokWorkUnitTimeStamp
+        logger.debug(s"invokWorkUnitLong elapse $invokWorkUnitLong ms:$unit")
 
         //执行完workUnit之后，修改workUnit状态并保存
         unit.status = "WAITING"
@@ -86,19 +94,19 @@ class TaskManagerImpl extends TaskManager{
           }
           case _ => 0
         }
-        taskMapper.updateWorkUnitInfo(unit)
+        taskMapper.updateWorkUnitInfo(unit,session)
       })
 
     } catch {
       case e: Exception => {
         try {
           //task执行出现异常时，记录异常信息
+          logger.error("task failed and log error, query dtf_errorlog for detail!", e)
           taskMapper.saveDtfErrorLog(TaskErrorBean(new ju.Date(), taskInfo.taskName, taskInfo.targetId,
-            null, context.appmClusterInfo.currentVotid, e.getMessage))
-          logger.error("task failed and log error, query dtf_errorlog for detail!",e)
+            null, context.appmClusterInfo.currentVotid, e.getMessage),session)
         } catch {
           //如果记录异常信息出现异常，则直接打印异常信息
-          case e2: Exception => logger.error("task failed and log error failed too!",e2)
+          case e2: Exception => logger.error("task failed and log error failed too!", e2)
         }
       }
     } finally {
@@ -111,24 +119,29 @@ class TaskManagerImpl extends TaskManager{
           case 0 => 0
           case _ => taskInfo.errors + exceptionUnitSize
         }
-        taskMapper.updateTaskInfo(taskInfo)
+        taskMapper.updateTaskInfo(taskInfo,session)
       } catch {
         case e: Exception => {
           e.printStackTrace()
           try {
             //task执行出现异常时，记录异常信息
             taskMapper.saveDtfErrorLog(TaskErrorBean(new ju.Date(), taskInfo.taskName, taskInfo.targetId,
-              null, context.appmClusterInfo.currentVotid, e.getMessage))
-            logger.error("task failed and log error, query dtf_errorlog for detail!",e)
+              null, context.appmClusterInfo.currentVotid, e.getMessage),session)
+            logger.error("task failed and log error, query dtf_errorlog for detail!", e)
           } catch {
             //如果记录异常信息出现异常，则直接打印异常信息
-            case e2: Exception => logger.error("task failed and log error failed too!",e2)
+            case e2: Exception => logger.error("task failed and log error failed too!", e2)
           }
         }
       } finally {
+        if(session != null){
+          session.commit()
+          session.close()
+        }
         //将task重新放入到缓存中
         taskMapper.giveBackTaskZsetList(context.appmClusterInfo.currentVotid,
-          ju.Arrays.asList(ZSetItemBean(taskInfo.targetId + "||" + taskInfo.taskName,taskInfo.nextTime.getTime())))
+          ju.Arrays.asList(ZSetItemBean(taskInfo.taskId, taskInfo.nextTime.getTime())))
+
       }
 
     }
@@ -138,22 +151,21 @@ class TaskManagerImpl extends TaskManager{
     var unitResult = WorkUnitResult.SUCCESS
     var ex: Exception = null;
     var msg = ""
-    try{
+    try {
       val bean = ContextHolder.getBean(workUnit.springBeanName).asInstanceOf[WorkUnitRunable]
       bean.runWork(workUnit)
-    }catch {
-      case e:Exception => {
-        logger.error(s"run workunit ${workUnit} failed !",e)
+    } catch {
+      case e: Exception => {
+        logger.error(s"run workunit ${workUnit} failed !", e)
         ex = e
         unitResult = WorkUnitResult.EXCEPTION
       }
     }
 
-    WorkUnitResult(unitResult,msg,ex)
+    WorkUnitResult(unitResult, msg, ex)
   }
 
   override def finishTask(taskResult: TaskResult, taskScheBeanNm: String): Unit = ???
-
 
 
 }

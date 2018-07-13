@@ -39,7 +39,7 @@ class DtsfConf {
   @Qualifier("dtfsDataSource")
   val dtfsDataSource: DruidDataSource = null
 
-  @Bean(Array("mainSqlSessionFactory"))
+  @Bean(Array("bgEra_dtsf_SqlSessionFactory"))
   def sqlSeesionFatory(): SqlSessionFactoryBean = {
     val sqlSessionFactoryBean = new SqlSessionFactoryBean
     sqlSessionFactoryBean.setDataSource(dtfsDataSource)

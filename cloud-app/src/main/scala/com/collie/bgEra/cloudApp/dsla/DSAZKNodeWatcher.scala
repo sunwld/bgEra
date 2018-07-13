@@ -9,11 +9,8 @@ import org.slf4j.{Logger, LoggerFactory}
 import scala.collection.mutable
 
 
-class DSAZKNodeWatcher private() extends Watcher {
+class DSAZKNodeWatcher private(private val latchBeanList:mutable.ListBuffer[LatchBean]) extends Watcher {
   private val logger: Logger = LoggerFactory.getLogger("dsla")
-
-  private var latchBeanList: mutable.ListBuffer[LatchBean] = _
-
 
   override def process(event: WatchedEvent): Unit = {
     if (event.getType == EventType.NodeDeleted) {
@@ -36,8 +33,7 @@ object DSAZKNodeWatcher {
     if (dsaZKNodeWatcher == null) {
       this.synchronized {
         if (dsaZKNodeWatcher == null) {
-          dsaZKNodeWatcher = new DSAZKNodeWatcher()
-          dsaZKNodeWatcher.latchBeanList = mutable.ListBuffer()
+          dsaZKNodeWatcher = new DSAZKNodeWatcher(mutable.ListBuffer[LatchBean]())
         }
       }
     }

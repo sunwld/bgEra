@@ -1,112 +1,116 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="com.collie.bgEra.cloudApp.dtsf.mapper.TaskMapper">
-  <!--<select id="qryTask" resultType="java.util.Map">-->
+    <!--<select id="qryTask" resultType="java.util.Map">-->
     <!--SELECT NAME,nexttime,targetid FROM dtf_task-->
-  <!--</select>-->
+    <!--</select>-->
 
-  <select id="qryAllTartInfo" resultType="com.collie.bgEra.cloudApp.dtsf.bean.TargetInfo">
+    <select id="qryAllTartInfo" resultType="com.collie.bgEra.cloudApp.dtsf.bean.TargetInfo">
     SELECT NAME,shardingvalue,description FROM dtf_targetinfo ORDER BY shardingvalue
   </select>
 
-  <select id="qryTartInfoByName" parameterType="String" resultType="com.collie.bgEra.cloudApp.dtsf.bean.TargetInfo">
+    <select id="qryTargetInfoByName" parameterType="String" resultType="com.collie.bgEra.cloudApp.dtsf.bean.TargetInfo">
     SELECT NAME,shardingvalue,description FROM dtf_targetinfo WHERE name = #{name}
   </select>
 
-  <!--<select id="qryResourceMapByTarget" parameterType="String" resultType="com.collie.bgEra.cloudApp.dtsf.bean.ResourceInfo">
-    SELECT t.name resourceName, t.restype resourceType  FROM dtf_resource t WHERE targetid = #{name}
-  </select>-->
+    <!--<select id="qryResourceMapByTarget" parameterType="String" resultType="com.collie.bgEra.cloudApp.dtsf.bean.ResourceInfo">
+      SELECT t.name resourceName, t.restype resourceType  FROM dtf_resource t WHERE targetid = #{name}
+    </select>-->
 
-  <insert id="insertTargetShardingMap" >
-    insert  into dtf_sharding_map(zksession, dtftargetid)
-    values
-    <foreach collection="list" item="shardTarget" index="index" separator=",">
-      (
-      #{shardTarget.zkSessionId},
-      #{shardTarget.dtfTargetId}
-      )
-    </foreach>
-  </insert>
+    <insert id="insertTargetShardingMap">
+        insert into dtf_sharding_map(zksession, dtftargetid)
+        values
+        <foreach collection="list" item="shardTarget" index="index" separator=",">
+            (
+            #{shardTarget.zkSessionId},
+            #{shardTarget.dtfTargetId}
+            )
+        </foreach>
+    </insert>
 
-  <delete id="deleteTargetShardingMap">
+    <delete id="deleteTargetShardingMap">
     delete from dtf_sharding_map
   </delete>
 
-  <insert id="insertZkSessionInfo" parameterType="java.util.List">
-    insert  into dtf_zksession(sessionid, ismaster)
-    values
-    <foreach collection="list" item="item" index="index" separator=",">
-      (
-      #{item.zksessionId},
-      #{item.isMaster}
-      )
-    </foreach>
-  </insert>
+    <insert id="insertZkSessionInfo" parameterType="java.util.List">
+        insert into dtf_zksession(sessionid, ismaster)
+        values
+        <foreach collection="list" item="item" index="index" separator=",">
+            (
+            #{item.zksessionId},
+            #{item.isMaster}
+            )
+        </foreach>
+    </insert>
 
-  <select id="qryAllZkSessionId" resultType="String">
+    <select id="qryAllZkSessionId" resultType="String">
     SELECT sessionid FROM dtf_zksession
   </select>
 
-  <delete id="deleteAllZkSessionInfo">
+    <delete id="deleteAllZkSessionInfo">
     delete from dtf_zksession
   </delete>
 
-  <select id="getTargetShardingMap" resultType="com.collie.bgEra.cloudApp.dtsf.bean.ShardingTarget">
+    <select id="getTargetShardingMap" resultType="com.collie.bgEra.cloudApp.dtsf.bean.ShardingTarget">
     select zksession zkSessionId,dtftargetid dtfTargetId from dtf_sharding_map
   </select>
 
-  <select id="getTargetShardingBySessionId" parameterType="String" resultType="String">
+    <select id="getTargetShardingBySessionId" parameterType="String" resultType="String">
     select dtftargetid dtfTargetId
     from dtf_sharding_map
     where zksession = #{zkSessionId}
   </select>
 
-  <select id="qryPerpredTaskListByTargets" parameterType="java.util.List" resultType="com.collie.bgEra.cloudApp.dtsf.bean.TaskInfo" >
-    SELECT targetid targetId,taskname taskName,nexttime nextTime
-    FROM dtf_task_runtime t
-    where t.targetid in
-    <foreach collection="list" index="index" item="item" open="(" separator="," close=")">
-      #{item}
-    </foreach>
-  </select>
+    <select id="qryPerpredTaskListByTargets" parameterType="java.util.List"
+            resultType="com.collie.bgEra.cloudApp.dtsf.bean.TaskInfo">
+        SELECT t.taskid taskId,targetid targetId,taskname taskName,nexttime nextTime
+        FROM dtf_task_runtime t
+        where t.targetid in
+        <foreach collection="list" index="index" item="item" open="(" separator="," close=")">
+            #{item}
+        </foreach>
+    </select>
 
-  <select id="qryTaskInfoById" parameterType="java.util.Map" resultType="com.collie.bgEra.cloudApp.dtsf.bean.TaskInfo" >
+    <select id="qryTaskInfoById" parameterType="String"
+            resultType="com.collie.bgEra.cloudApp.dtsf.bean.TaskInfo">
     SELECT t.taskname taskName,t.targetid targetId,t.status
        ,ERRORS,thistime thisTime,nexttime nextTime
        ,a.description,a.schedulename taskSchedulerBean
-       ,a.threadpoolname taskThreadPoolName
+       ,a.threadpoolname taskThreadPoolName, t.taskid taskId
     FROM dtf_task_runtime t,dtf_task a
-    WHERE t.targetid = #{targetId}
-      AND t.taskname = #{taskName}
+    WHERE t.taskid = #{taskId}
       AND t.taskname = a.name
   </select>
 
-  <select id="qryWorkUnitInfoById" parameterType="java.util.Map" resultType="com.collie.bgEra.cloudApp.dtsf.bean.WorkUnitInfo" >
+    <select id="qryWorkUnitInfoById" parameterType="String"
+            resultType="com.collie.bgEra.cloudApp.dtsf.bean.WorkUnitInfo">
     SELECT t.wkunitname workUnitName, t.taskname taskName,t.targetid targetId,
-       t.status,t.thistime thisTime, t.errors,a.description,a.programbean springBeanName
+       t.status,t.thistime thisTime, t.errors,a.description,a.programbean springBeanName,
+       t.wkunitid workUnitId
     FROM dtf_wkunit_runtime t, dtf_wkunit_program a
-   WHERE t.taskname = #{taskName} AND t.targetid = #{targetId} AND t.wkunitname = a.name
+   WHERE t.wkunitid = #{workUnitId}
+     AND t.wkunitname = a.name
   </select>
 
-  <update id="updateTaskInfo" parameterType="com.collie.bgEra.cloudApp.dtsf.bean.TaskInfo">
+    <update id="updateTaskInfo" parameterType="com.collie.bgEra.cloudApp.dtsf.bean.TaskInfo">
     UPDATE dtf_task_runtime t SET t.status = #{status},
       t.errors=#{errors},t.thistime=#{thisTime},nexttime=#{nextTime}
-    WHERE t.taskname = #{taskName} AND t.targetid=#{targetId}
+    WHERE t.taskid = #{taskId}
   </update>
 
-  <select id="qryWorkUnitNameByTask" parameterType="java.util.Map" resultType="String" >
-    SELECT t.wkunitname
+    <select id="qryWorkUnitIdByTask" parameterType="java.util.Map" resultType="String">
+    SELECT t.wkunitid
     FROM dtf_wkunit_runtime t
    WHERE t.taskname = #{taskName} AND t.targetid = #{targetId}
   </select>
 
-  <update id="updateWorkUnitInfo" parameterType="com.collie.bgEra.cloudApp.dtsf.bean.WorkUnitInfo">
+    <update id="updateWorkUnitInfo" parameterType="com.collie.bgEra.cloudApp.dtsf.bean.WorkUnitInfo">
     UPDATE dtf_wkunit_runtime t SET t.errors = #{errors}, t.status=#{status},t.thistime=#{thisTime}
-    WHERE t.wkunitname=#{workUnitName} AND t.taskname = #{taskName} AND t.targetid=#{targetId}
+    WHERE t.wkunitid = #{workUnitId}
   </update>
 
-  <insert id="saveDtfErrorLog" parameterType="com.collie.bgEra.cloudApp.dtsf.bean.TaskErrorBean">
-    INSERT INTO dtf_errorlog VALUES(#{logDate},#{taskName},#{targetId},#{wkunitName},#{zkSession},#{errmsg})
+    <insert id="saveDtfErrorLog" parameterType="com.collie.bgEra.cloudApp.dtsf.bean.TaskErrorBean">
+    INSERT INTO dtf_errorlog VALUES(#{logDate},#{taskName},#{targetId},#{wkunitName},#{zkSession},left(#{errmsg},500))
   </insert>
 
 </mapper>

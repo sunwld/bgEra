@@ -5,6 +5,8 @@ import java.util.Date
 import scala.beans.BeanProperty
 
 class TaskInfo {
+  @BeanProperty var taskId: String = _
+
   @BeanProperty var taskName: String = _
 
   @BeanProperty var targetId: String = _

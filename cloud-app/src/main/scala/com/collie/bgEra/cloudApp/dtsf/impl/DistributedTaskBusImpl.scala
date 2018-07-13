@@ -6,7 +6,9 @@ import java.util.Date
 
 import com.collie.bgEra.cloudApp.CloudAppContext
 import com.collie.bgEra.cloudApp.dtsf.bean.TaskInfo
+import com.collie.bgEra.cloudApp.dtsf.mapper.TaskMapper
 import com.collie.bgEra.cloudApp.dtsf.{DistributedTaskBus, TaskManager}
+import com.collie.bgEra.cloudApp.redisCache.bean.ZSetItemBean
 import javax.xml.parsers.ParserConfigurationException
 import org.quartz.impl.StdSchedulerFactory
 import org.quartz._
@@ -30,13 +32,16 @@ class DistributedTaskBusImpl extends DistributedTaskBus {
     private val taskManager: TaskManagerImpl = null
     @Autowired
     private val mainScheduler: Scheduler = null
+    @Autowired
+    private val taskMapper:TaskMapper = null
 
     override def runBus(): Unit = {
-        val taskList: util.List[TaskInfo] = taskManager.getPreparedTaskList(context.appmClusterInfo.currentVotid)
+        val taskList: util.List[ZSetItemBean] = taskManager.getPreparedTaskList(context.appmClusterInfo.currentVotid)
         logger.info("scanned " + taskList.size() + " task")
-        taskList.foreach(task => {
-            val scheduler: Scheduler = getScheduler(task.taskThreadPoolName)
-            fillScheduler(scheduler,task)
+        taskList.foreach(taskZset => {
+            val taskInfo = taskMapper.qryTaskInfoById(taskZset.getId)
+            val scheduler: Scheduler = getScheduler(taskInfo.taskThreadPoolName)
+            fillScheduler(scheduler,taskInfo)
             if (!scheduler.isStarted()){
                 scheduler.start()
             }

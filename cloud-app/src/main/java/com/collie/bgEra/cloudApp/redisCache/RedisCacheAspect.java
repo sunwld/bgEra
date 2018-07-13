@@ -115,11 +115,11 @@ public class RedisCacheAspect {
         max = AspectUtils.parseKey(anno.maxScoreSpEl(),jpMethod,args,Double.class);
       }
 
-      latchId = getLatch(key);
       if(redisService.hasKey(key)){
         result = redisService.popZSetItemByScoreWithScore(key,min,max);
         logger.debug("pop zset item from redis, redis key:" + key + ", minScore:" + min + ",maxScore" + max);
       }else{
+        latchId = getLatch(key);
         result = (List<ZSetItemBean>) pjp.proceed();
         redisService.addZsetItems(key,result, -1);
         result = redisService.popZSetItemByScoreWithScore(key,min,max);
@@ -155,11 +155,11 @@ public class RedisCacheAspect {
       }
       addRecords = AspectUtils.parseKey(anno.addRecords(), jpMethod,args,addRecords.getClass());
 
-      latchId = getLatch(key);
-      redisService.addZsetItemsAndTrimByIndex(key,addRecords,keepRecords,-1,reverse);
       logger.debug("add zset item to redis, redis key:" + key + "keep the zset length to " + keepRecords);
       result = pjp.proceed();
       logger.debug("run jpMethod: " + jpMethod.getName() + "by @ZsetWeedoutByIndex");
+      //latchId = getLatch(key);
+      redisService.addZsetItemsAndTrimByIndex(key,addRecords,keepRecords,-1,reverse);
       return result;
     }finally {
       releaseLatch(key,latchId);
@@ -247,15 +247,15 @@ public class RedisCacheAspect {
       field = AspectUtils.parseKey(anno.field(), jpMethod,args);
       Assert.notNull(key,"field cannot be null");
 
-      if(redisService.hexists(key,field)){
-        result = redisService.hsetGet(key,field);
-        logger.debug("get hset item from redis, redis key:" + key + ", field:" + field);
-      }else{
-        latchId = getLatch(key + ":" + field);
-        result = pjp.proceed();
-        logger.debug("run jpMethod: " + jpMethod.getName() + "by @HsetGetItem");
-        logger.debug("hset key or field is not exists, query from db, redis key:" + key + ", field:" + field);
-        redisService.hsetPut(key,field,result);
+      result = redisService.hsetGet(key,field);
+      if (result == null) {
+        if (!redisService.hexists(key, field)) {
+          latchId = getLatch(key + ":" + field);
+          result = pjp.proceed();
+          logger.debug("run jpMethod: " + jpMethod.getName() + "by @HsetGetItem");
+          logger.debug("hset key or field is not exists, query from db, redis key:" + key + ", field:" + field);
+          redisService.hsetPut(key, field, result);
+        }
       }
     } finally {
       releaseLatch(key + ":" + field, latchId);
