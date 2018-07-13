@@ -197,7 +197,6 @@ public class RedisCacheAspect {
         itemScore = AspectUtils.parseKey(anno.itemScoreEl(), jpMethod,args,Double.class);
       }
 
-      latchId = getLatch(key);
       redisService.addZsetItemsAndTrimByIndex(key, Arrays.asList(ZSetItemBean.apply(itemId,itemScore)),keepRecords,-1,reverse);
       logger.debug("add zset item to redis, redis key:" + key + "keep the zset length to " + keepRecords);
       result = pjp.proceed();
@@ -222,10 +221,10 @@ public class RedisCacheAspect {
 
     putMap = AspectUtils.parseKey(anno.map(), jpMethod,args,putMap.getClass());
 
-    result = pjp.proceed();
-    logger.debug("run jpMethod: " + jpMethod.getName() + "by @HsetPut");
     redisService.hsetPut(key,putMap);
     logger.debug("put hset item to redis, redis key:" + key + ", items:" + putMap);
+    result = pjp.proceed();
+    logger.debug("run jpMethod: " + jpMethod.getName() + "by @HsetPut");
 
     return result;
   }
@@ -279,7 +278,7 @@ public class RedisCacheAspect {
       field = AspectUtils.parseKey(anno.field(), jpMethod,args);
       Assert.notNull(key,"field cannot be null");
 
-      latchId = getLatch(key + ":" + field);
+      //latchId = getLatch(key + ":" + field);
       redisService.hsetDelItem(key,field);
       logger.debug("delete hset item from db, redis key:" + key + ", field:" + field);
       result = pjp.proceed();
@@ -307,7 +306,7 @@ public class RedisCacheAspect {
       Assert.notNull(key,"field cannot be null");
       Object hsetItem = AspectUtils.parseKey(anno.hsetItemEl(), jpMethod,args,Object.class);
 
-      latchId = getLatch(key + ":" + field);
+      //latchId = getLatch(key + ":" + field);
       redisService.hsetPut(key,field,hsetItem);
       logger.debug("put hset item to redis, redis key:" + key + ", field:" + field);
       result = pjp.proceed();

@@ -25,7 +25,7 @@ class TaskManagerImpl extends TaskManager {
 
 
   private val lock: Object = new Object()
-  private val taskLockMap: ju.Map[String,Object] = new ju.HashMap()
+  private val taskLockMap: ju.Map[String, Object] = new ju.HashMap()
 
   @Autowired
   val taskMapper: TaskMapper = null
@@ -54,6 +54,7 @@ class TaskManagerImpl extends TaskManager {
 
   override def runTask(taskInfo: TaskInfo): Unit = {
     //用于记录此次task执行过程中，失败的workUnit的数量
+    var taskBeginTimeStamp: Long = System.currentTimeMillis()
     var exceptionUnitSize = 0
     val nextTimeSched: TaskSchedule = ContextHolder.getBean(taskInfo.taskSchedulerBean)
 
@@ -65,9 +66,9 @@ class TaskManagerImpl extends TaskManager {
       if (taskLock == null) {
         lock.synchronized {
           taskLock = taskLockMap.get(taskInfo.taskId)
-          if (taskLock == null){
+          if (taskLock == null) {
             taskLock = new Object()
-            taskLockMap.put(taskInfo.taskId,taskLock)
+            taskLockMap.put(taskInfo.taskId, taskLock)
           }
         }
       }
@@ -166,6 +167,8 @@ class TaskManagerImpl extends TaskManager {
         taskMapper.giveBackTaskZsetList(context.appmClusterInfo.currentVotid,
           ju.Arrays.asList(ZSetItemBean(taskInfo.taskId, taskInfo.nextTime.getTime())))
 
+        val taskRunLong: Long = System.currentTimeMillis() - taskBeginTimeStamp
+        logger.debug(s"the task elapse $taskRunLong ms, task is:${taskInfo.taskId}")
       }
 
     }

@@ -146,7 +146,11 @@ class TaskMapper {
     try {
       session = factory.openSession(false)
       val taskInfo: TaskInfo = session.selectOne(sql, taskId)
-      val taskUnitList: util.List[String] = session.selectList(taskUnitSql, taskId)
+
+      val paramMap:util.Map[String,String] = new ju.HashMap[String,String]()
+      paramMap.put("taskName",taskInfo.taskName)
+      paramMap.put("targetId",taskInfo.targetId)
+      val taskUnitList: util.List[String] = session.selectList(taskUnitSql, paramMap)
       taskInfo.setWorkUnitList(taskUnitList)
       taskInfo
     } finally {
