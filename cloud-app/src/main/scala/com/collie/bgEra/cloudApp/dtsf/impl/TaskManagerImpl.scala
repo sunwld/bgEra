@@ -89,7 +89,7 @@ class TaskManagerImpl extends TaskManager {
         taskMapper.updateTaskInfo(taskInfo, session)
       }
       val lockTimeLong = System.currentTimeMillis() - lockTimeStamp
-      logger.info(s"run task check elapse $lockTimeLong ms,task:$taskInfo")
+      logger.debug(s"run task check elapse $lockTimeLong ms,task:$taskInfo")
 
       //遍历task中的workUnit，并执行
       val workUnitIds = taskInfo.workUnitList
