@@ -1,6 +1,6 @@
 package com.collie.bgEra.cloudApp.dsla
 
-import java.util.concurrent.CountDownLatch
+import java.util.concurrent.{CountDownLatch, TimeUnit}
 
 import com.collie.bgEra.cloudApp.base.ZookeeperSession
 import com.collie.bgEra.cloudApp.utils.ContextHolder
@@ -29,23 +29,23 @@ class DistributedServiceLatchArbitrator private(val projectName: String) {
     try {
       zkSession.createUnexistsNode(latchKeyPath, "", CreateMode.EPHEMERAL)
       val latchId = s"$latchKeyPath,latchTime:${System.currentTimeMillis()},zkSession:${zkSessionId}"
-      zkSession.setData(latchKeyPath,latchId)
+      zkSession.setData(latchKeyPath, latchId)
       logger.debug(s"session: $zkSessionId get latch $latchKeyPath")
       latchId
     } catch {
       case ex: KeeperException.NodeExistsException => {
-        Thread.sleep((new util.Random).nextInt(100))
-        if(zkSession.exists(latchKeyPath) == null){
+        Thread.sleep((new util.Random).nextInt(200))
+        if (zkSession.exists(latchKeyPath) == null) {
           grabLatch(latchKey)
-        }else{
+        } else {
           val countDownLatch = new CountDownLatch(1)
           // node not exists
-          if( zkSession.existsAndWatch(latchKeyPath,DSAZKNodeWatcher(countDownLatch,latchKeyPath)) == null ){
+          if (zkSession.existsAndWatch(latchKeyPath, DSAZKNodeWatcher(countDownLatch, latchKeyPath)) == null) {
             grabLatch(latchKey)
-          }else{
-            logger.debug(latchKey+"will sleep for watcher")
-            countDownLatch.await()
-            logger.debug(latchKey+"end sleep")
+          } else {
+            logger.debug(latchKey + "will sleep for watcher")
+            countDownLatch.await(10, TimeUnit.SECONDS)
+            logger.debug(latchKey + "end sleep")
             grabLatch(latchKey)
           }
         }
@@ -53,9 +53,9 @@ class DistributedServiceLatchArbitrator private(val projectName: String) {
     }
   }
 
-  def releaseLatch(latchKey: String,latchId: String) = {
+  def releaseLatch(latchKey: String, latchId: String) = {
     var latchKeyPath = s"$latchPath/$latchKey"
-    zkSession.deleteNodeSafely(latchKeyPath,latchId)
+    zkSession.deleteNodeSafely(latchKeyPath, latchId)
     logger.debug(s"session: ${zkSession.getSessionId()} release latch $latchKeyPath")
   }
 }
