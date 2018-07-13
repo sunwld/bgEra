@@ -1,9 +1,11 @@
 package com.collie.bgEra.cloudApp.dtsf.conf
 
 import com.alibaba.druid.pool.DruidDataSource
+import com.collie.bgEra.cloudApp.CloudAppContext
 import com.collie.bgEra.cloudApp.appm.conf.AppmConf
 import com.collie.bgEra.cloudApp.dtsf.DistributedTaskBus
 import com.collie.bgEra.cloudApp.redisCache.conf.RedisCacheConf
+import com.collie.bgEra.cloudApp.utils.ContextHolder
 import com.collie.bgEra.commons.util.CommonUtils
 import org.mybatis.spring.SqlSessionFactoryBean
 import org.quartz.CronTrigger
@@ -35,17 +37,14 @@ import org.springframework.scheduling.quartz.{CronTriggerFactoryBean, MethodInvo
 @ComponentScan(Array("com.collie.bgEra.cloudApp.dtsf"))
 class DtsfConf {
 
-  @Autowired
-  @Qualifier("dtfsDataSource")
-  val dtfsDataSource: DruidDataSource = null
-
   @Bean(Array("bgEra_dtsf_SqlSessionFactory"))
-  def sqlSeesionFatory(): SqlSessionFactoryBean = {
-    val sqlSessionFactoryBean = new SqlSessionFactoryBean
+  def sqlSeesionFatory(@Qualifier("dtfsDataSource") dtfsDataSource: DruidDataSource): SqlSessionFactoryBean = {
+    val sqlSessionFactoryBean = new SqlSessionFactoryBean()
     sqlSessionFactoryBean.setDataSource(dtfsDataSource)
     val resolver = new PathMatchingResourcePatternResolver()
     val resources = resolver.getResources("classpath*:com/collie/bgEra/cloudApp/dtsf/mapper/*Mapper.xml")
     sqlSessionFactoryBean.setMapperLocations(resources)
+    ContextHolder.getBean(classOf[CloudAppContext]).putSqlSessionFactory("dtsfMain",sqlSessionFactoryBean.getObject())
     sqlSessionFactoryBean
   }
 

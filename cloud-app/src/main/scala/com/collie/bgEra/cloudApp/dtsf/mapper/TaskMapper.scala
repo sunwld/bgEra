@@ -1,6 +1,7 @@
 package com.collie.bgEra.cloudApp.dtsf.mapper
 
 import java.util
+import java.util.Properties
 
 import com.collie.bgEra.cloudApp.dtsf.bean._
 import com.collie.bgEra.cloudApp.redisCache.bean.ZSetItemBean
@@ -225,6 +226,22 @@ class TaskMapper {
         session.close()
       }
     }
+  }
+
+  def qryResourcePropByName(name: String) = {
+    val connPros = new Properties()
+
+    connPros.setProperty("druid.driverClassName","com.mysql.jdbc.Driver")
+    connPros.setProperty("druid.username","dtsf")
+    connPros.setProperty("druid.password","1234yjd")
+    connPros.setProperty("druid.url","jdbc:mysql://133.96.6.1:3306/dtsfdb?characterEncoding=utf-8&useSSL=false")
+
+    connPros.setProperty("druid.initialSize","30")
+    connPros.setProperty("druid.minIdle","30")
+    connPros.setProperty("druid.maxActive","100")
+    connPros.setProperty("druid.poolPreparedStatements","false")
+    connPros.setProperty("druid.maxPoolPreparedStatementPerConnectionSize","0")
+    connPros
   }
 
 

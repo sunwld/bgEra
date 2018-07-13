@@ -3,12 +3,13 @@ package com.collie.bgEra.cloudApp.dtsf
 import java.util.Properties
 
 import com.collie.bgEra.cloudApp.dtsf.bean.{DataSourceResource, HostSshConnPoolResource, JmxConnPoolResource}
+import org.apache.ibatis.session.SqlSessionFactory
 
 trait ResourceManager {
 
-  def getDataSourceResource(resourceName: String): DataSourceResource
+  def getDataSourceResource(resourceName: String): SqlSessionFactory
 
-  def initDataSourceResource(resourceContext: Properties): Unit
+  def initDataSourceResource(name: String, defaultProp: Properties): SqlSessionFactory
 
   def getHostSshConnPoolResource(resourceName: String): HostSshConnPoolResource
 

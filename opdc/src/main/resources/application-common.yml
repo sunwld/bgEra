@@ -9,6 +9,27 @@ spring:
       username: scifmation
       password: kxht#123
       url: jdbc:oracle:thin:@133.96.9.118:7521:orcl
+      initial-size: 30
+      min-idle: 30
+      max-active: 100
+      max-wait: 30000
+      pool-prepared-statements: false
+      max-pool-prepared-statement-per-connection-size: 0
+      validation-query: SELECT 1 FROM dual
+      validation-query-timeout: 3
+      test-on-borrow: true
+      test-while-idle: true
+      time-between-eviction-runs-millis: 30000
+      min-evictable-idle-time-millis: 900000
+      remove-abandoned: true
+      remove-abandoned-timeout: 180
+      log-abandoned: true
+      filters: stat,wall
+      filter:
+        slf4j:
+          statement-executable-sql-log-enable: true
+          enabled: true
+
 #  redis:
 #    cluster:
 #      nodes:
