@@ -37,6 +37,10 @@ class DistributedTaskBusImpl extends DistributedTaskBus {
 
     override def runBus(): Unit = {
         val taskList: util.List[ZSetItemBean] = taskManager.getPreparedTaskList(context.appmClusterInfo.currentVotid)
+        if(taskList == null || taskList.size() == 0){
+          return
+        }
+
         logger.info("scanned " + taskList.size() + " task")
         taskList.foreach(taskZset => {
             val taskInfo = taskMapper.qryTaskInfoById(taskZset.getId)

@@ -310,7 +310,6 @@ public class RedisCacheAspect {
       latchId = getLatch(key + ":" + field);
       redisService.hsetPut(key,field,hsetItem);
       logger.debug("put hset item to redis, redis key:" + key + ", field:" + field);
-
       result = pjp.proceed();
       logger.debug("run jpMethod: " + jpMethod.getName() + "by @HsetPutItem");
     } finally {
