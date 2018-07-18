@@ -20,8 +20,8 @@ class DslaConf {
   }
 
   @Bean(name = Array("dslaZkSession"))
-  def getZkDriver(@Qualifier("zkUrl") zkUrl: String): ZookeeperSession = {
-    ZookeeperSession(zkUrl)
+  def getZkDriver(): ZookeeperSession = {
+    ZookeeperSession(context.zkUrl)
   }
 
 }

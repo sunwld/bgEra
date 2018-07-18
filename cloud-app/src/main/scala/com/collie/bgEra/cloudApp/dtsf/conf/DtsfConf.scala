@@ -72,7 +72,7 @@ class DtsfConf {
   @Bean(Array("mainScheduler"))
   def mainScheduler(@Qualifier("mainTrigger") mainTrigger: CronTriggerFactoryBean): SchedulerFactoryBean = {
     val scheduler = new SchedulerFactoryBean()
-    scheduler.setTriggers(mainTrigger.getObject)
+    scheduler.setTriggers(mainTrigger.getObject())
     scheduler.setAutoStartup(false)
     scheduler.setStartupDelay(5)
     val mainScheduler = CommonUtils.readPropertiesFile("schedulerProp/mainScheduler.properties")

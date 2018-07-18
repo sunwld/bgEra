@@ -2,7 +2,7 @@ package com.collie.bgEra.cloudApp.dtsf.impl
 
 import com.collie.bgEra.cloudApp.dtsf.TaskManager
 import com.collie.bgEra.cloudApp.dtsf.bean.TaskInfo
-import org.quartz.{Job, JobExecutionContext}
+import org.quartz.{DisallowConcurrentExecution, Job, JobExecutionContext}
 
 class QuartzJob extends Job{
   override def execute(context: JobExecutionContext): Unit = {

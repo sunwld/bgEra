@@ -37,7 +37,7 @@ class AppmConf {
   }
 
   @Bean(name = Array("appmZkSession"))
-  def getZkDriver(@Qualifier("zkUrl") zkUrl: String): ZookeeperSession = {
-    ZookeeperSession(zkUrl)
+  def getZkDriver(): ZookeeperSession = {
+    ZookeeperSession(context.zkUrl)
   }
 }

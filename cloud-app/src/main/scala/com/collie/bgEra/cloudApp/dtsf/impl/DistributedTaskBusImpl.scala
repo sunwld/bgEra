@@ -89,7 +89,7 @@ class DistributedTaskBusImpl extends DistributedTaskBus {
             val jobDataMap = jobDetail.getJobDataMap
             jobDataMap.put("task", task)
             jobDataMap.put("taskManager", taskManager)
-            val trigger = TriggerBuilder.newTrigger.withIdentity(name + "_Trigger", group).build().asInstanceOf[SimpleTriggerImpl]
+            val trigger = TriggerBuilder.newTrigger().withIdentity(name + "_Trigger", group).build().asInstanceOf[SimpleTriggerImpl]
             //只执行一次，并且立刻执行
             trigger.setStartTime(new Date())
             trigger.setRepeatInterval(20)

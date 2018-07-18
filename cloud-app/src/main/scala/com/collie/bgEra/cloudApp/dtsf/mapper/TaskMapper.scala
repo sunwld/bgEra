@@ -249,4 +249,20 @@ class TaskMapper {
   }
 
 
+
+  def qryAllTartInfoTest(factory1: SqlSessionFactory) = {
+    val sql = NAMESPACE + ".qryAllTartInfo"
+    var session: SqlSession = null
+    try {
+      session = factory1.openSession(false)
+      val result: ju.List[TargetInfo] = session.selectList(sql)
+      result
+    } finally {
+      if (session != null) {
+        session.close()
+      }
+    }
+  }
+
+
 }

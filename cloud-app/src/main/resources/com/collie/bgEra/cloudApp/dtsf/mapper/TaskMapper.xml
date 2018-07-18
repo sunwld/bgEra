@@ -113,4 +113,8 @@
     INSERT INTO dtf_errorlog VALUES(#{logDate},#{taskName},#{targetId},#{wkunitName},#{zkSession},left(#{errmsg},500))
   </insert>
 
+  <insert id="testInsert" parameterType="java.util.Map">
+    INSERT INTO yjdtest VALUES(#{id},#{name})
+  </insert>
+
 </mapper>

@@ -2,13 +2,14 @@ package com.collie.bgEra.cloudApp.redisCache
 
 import java.nio.charset.Charset
 
-import com.collie.bgEra.cloudApp.utils.KryoUtil
+import com.collie.bgEra.cloudApp.utils.{ContextHolder, KryoUtil}
 import org.springframework.beans.factory.annotation.{Autowired, Qualifier}
 import org.springframework.data.redis.serializer.StringRedisSerializer
 import org.springframework.stereotype.Component
 import redis.clients.jedis.{JedisCluster, Tuple}
 import java.{util => ju}
 
+import com.collie.bgEra.cloudApp.CloudAppContext
 import com.collie.bgEra.cloudApp.redisCache.bean.ZSetItemBean
 
 import scala.collection.JavaConversions._
@@ -19,9 +20,8 @@ import scala.collection.mutable
   */
 @Component
 class RedisService {
-  @Autowired
-  @Qualifier("jedisCluster")
-  private val jedis: JedisCluster = null
+
+  private val jedis: JedisCluster = ContextHolder.getBean(classOf[CloudAppContext]).jedisCluster
 
   private val strSerializer: StringRedisSerializer = new StringRedisSerializer(Charset.forName("UTF8"))
 
@@ -262,6 +262,27 @@ class RedisService {
     }else{
       null
     }
+  }
+
+  def listLpop(lKey: String): Any = {
+    val v: Array[Byte] = jedis.lpop(strSerializer.serialize(lKey))
+    kryoUtil.readFromByteArray(v)
+  }
+
+  def listLpush(lKey: String,values: Any*) ={
+    val k: Array[Byte] = strSerializer.serialize(lKey)
+    val vs: Seq[Array[Byte]] = values.map(kryoUtil.writeClassAndObjectToByteArray(_))
+    jedis.lpush(k,vs:_*)
+  }
+
+  def listRpush(lKey: String,value: Any) ={
+    val k: Array[Byte] = strSerializer.serialize(lKey)
+    val v = kryoUtil.writeClassAndObjectToByteArray(value)
+    jedis.rpush(k,v)
+  }
+
+  def listSize(lKey: String): Long = {
+    jedis.llen(strSerializer.serialize(lKey))
   }
 
   def hsetDelItem(key: String, field: String) = {

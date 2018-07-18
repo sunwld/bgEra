@@ -1,6 +1,7 @@
 package com.collie.bgEra.cloudApp
 
-import java.util.Properties
+import java.io.{File, PrintWriter}
+import java.util.{Properties, UUID}
 
 import com.collie.bgEra.cloudApp.appm.ClusterInfo
 import java.{util => ju}
@@ -14,22 +15,29 @@ import org.springframework.core.io.Resource
 import scala.collection.mutable
 import scala.beans.BeanProperty
 import org.springframework.core.io.support.PathMatchingResourcePatternResolver
+import redis.clients.jedis.JedisCluster
 
 import scala.collection.JavaConversions._
-case class CloudAppContext(val projectName: String,
+import scala.io.{BufferedSource, Source}
+class CloudAppContext(val projectName: String,
                       val minLiveServCount: Int, val clusterInitServCount: Int) {
 
-  @BeanProperty
-  var appmClusterInfo: ClusterInfo = null
-
-  @Autowired
+  @Autowired(required = false)
   val resourceManager: ResourceManager = null
 
   val quartzSchedPropMap: mutable.Map[String,Properties] = new mutable.HashMap()
   val dbSqlSessionFactoyMap: ju.Map[String,SqlSessionFactory] = new ju.HashMap()
 
-  private var defaultDruidProp: Properties = null
+  //context功能
+  var appmClusterInfo: ClusterInfo = null
+  var jedisCluster: JedisCluster = null
+  var zkUrl: String = null
+  private var appId: String = null
+
   initContext()
+
+  //以下，实现globalRS的功能
+  private var defaultDruidProp: Properties = null
 
   def getQuartzSchedulerPorp(poolName: String) ={
     var name = getSchedulerNameByThreadPool(poolName)
@@ -48,18 +56,7 @@ case class CloudAppContext(val projectName: String,
     s"${poolName}Scheduler"
   }
 
-  private def initContext(): Unit ={
-    val quartzSchedPropLocations = "classpath:schedulerProp/*Scheduler.properties"
-    val resolver = new PathMatchingResourcePatternResolver()
-    val propRes: Array[Resource] = resolver.getResources(quartzSchedPropLocations)
-    var prop: Properties = null
-    propRes.foreach(propRes => {
-      prop = CommonUtils.readPropertiesFile("schedulerProp/" + propRes.getFile().getName)
-      quartzSchedPropMap.put(prop.getProperty("org.quartz.scheduler.instanceName"),prop)
-    })
 
-    defaultDruidProp = CommonUtils.readPropertiesFile("druidProps/default.properties")
-  }
 
   def getDefaultDruidProp(): Properties = {
     val prop = new Properties()
@@ -85,5 +82,59 @@ case class CloudAppContext(val projectName: String,
     dbSqlSessionFactoyMap.put(name,factory)
   }
 
+  def getAppId(): String={
+    appId
+  }
 
+  private def initContext(): Unit ={
+    initQuartzSchedProps()
+    readDefaultDruidProp()
+    genAppId()
+  }
+
+  private def genAppId(){
+    val filePath = System.getProperty("user.dir") + "/myid"
+    val file = new File(filePath)
+    var source: BufferedSource = null
+    var writer: PrintWriter = null
+    try {
+      if (file.exists()) {
+        val lines = Source.fromFile(file).getLines()
+        if (lines.hasNext()) {
+          this.appId = lines.next()
+        }
+      }
+
+      if(this.appId == null){
+        this.appId = UUID.randomUUID().toString()
+        writer = new PrintWriter(file)
+        writer.println(this.appId)
+        writer.flush()
+      }
+    } finally{
+      if(source != null){
+        source.close()
+      }
+      if(writer != null){
+        writer.close()
+      }
+    }
+
+
+  }
+
+  private def readDefaultDruidProp() = {
+    defaultDruidProp = CommonUtils.readPropertiesFile("druidProps/default.properties")
+  }
+
+  private def initQuartzSchedProps() = {
+    val quartzSchedPropLocations = "classpath:schedulerProp/*Scheduler.properties"
+    val resolver = new PathMatchingResourcePatternResolver()
+    val propRes: Array[Resource] = resolver.getResources(quartzSchedPropLocations)
+    var prop: Properties = null
+    propRes.foreach(propRes => {
+      prop = CommonUtils.readPropertiesFile("schedulerProp/" + propRes.getFile().getName)
+      quartzSchedPropMap.put(prop.getProperty("org.quartz.scheduler.instanceName"),prop)
+    })
+  }
 }
