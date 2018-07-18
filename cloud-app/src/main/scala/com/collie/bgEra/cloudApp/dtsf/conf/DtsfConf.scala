@@ -1,14 +1,18 @@
 package com.collie.bgEra.cloudApp.dtsf.conf
 
+import java.util.Date
+
 import com.alibaba.druid.pool.DruidDataSource
 import com.collie.bgEra.cloudApp.CloudAppContext
 import com.collie.bgEra.cloudApp.appm.conf.AppmConf
+import com.collie.bgEra.cloudApp.bpq.{BpqConf, BpqQueueManger, BpqSqlQueueBus}
 import com.collie.bgEra.cloudApp.dtsf.DistributedTaskBus
 import com.collie.bgEra.cloudApp.redisCache.conf.RedisCacheConf
 import com.collie.bgEra.cloudApp.utils.ContextHolder
 import com.collie.bgEra.commons.util.CommonUtils
 import org.mybatis.spring.SqlSessionFactoryBean
-import org.quartz.CronTrigger
+import org.quartz.impl.triggers.SimpleTriggerImpl
+import org.quartz._
 import org.springframework.beans.factory.annotation.{Autowired, Qualifier}
 import org.springframework.context.annotation.{Bean, ComponentScan, Configuration, Import}
 import org.springframework.core.io.support.PathMatchingResourcePatternResolver
@@ -33,8 +37,8 @@ import org.springframework.scheduling.quartz.{CronTriggerFactoryBean, MethodInvo
   * redis数据源：jedisCluster：JedisCluster
   */
 @Configuration
-@Import(Array(classOf[AppmConf],classOf[RedisCacheConf]))
-@ComponentScan(Array("com.collie.bgEra.cloudApp.dtsf"))
+@Import(Array(classOf[AppmConf],classOf[RedisCacheConf],classOf[BpqConf]))
+@ComponentScan(Array("com.collie.bgEra.cloudApp.dtsf","com.collie.bgEra.cloudApp.utils"))
 class DtsfConf {
 
   @Bean(Array("bgEra_dtsf_SqlSessionFactory"))
@@ -48,6 +52,27 @@ class DtsfConf {
     sqlSessionFactoryBean
   }
 
+  @Bean(Array("dtsfBpqQueueManager"))
+  def dtsfBpqQueueManager(@Qualifier("bpqQueueScheduler") bpqQueueScheduler:Scheduler,
+                          @Autowired context: CloudAppContext): BpqQueueManger ={
+    val queueId = "DTSF"
+    val manager = BpqQueueManger(queueId,500)
+    val group = s"${queueId}Group"
+    //如果当前scheduler不存在此job，则填充此job
+    val jobkey = new JobKey(queueId + "_job", group)
+    val jobDetail = JobBuilder.newJob(classOf[BpqSqlQueueBus]).withIdentity(jobkey).build()
+    //将传入的JobBean对象放到JobDataMap对象中，这样当此job运行时，可以获取JobBean对象
+    val jobDataMap = jobDetail.getJobDataMap
+    jobDataMap.put("manager", manager)
+    val trigger = TriggerBuilder.newTrigger().withIdentity(queueId + "_Trigger", group).build().asInstanceOf[SimpleTriggerImpl]
+    //只执行一次，并且立刻执行
+    trigger.setStartTime(new Date())
+    trigger.setRepeatInterval(1000)
+    trigger.setRepeatCount(-1)
+    bpqQueueScheduler.scheduleJob(jobDetail, trigger)
+
+    manager
+  }
 
   @Bean(name = Array("mainJobDetail"))
   def jobDetail(@Qualifier("distributedTaskBus") bus: DistributedTaskBus): MethodInvokingJobDetailFactoryBean = {
@@ -79,5 +104,8 @@ class DtsfConf {
     scheduler.setQuartzProperties(mainScheduler)
     scheduler
   }
+}
 
+object DtsfConf{
+  val MAIN_SQL_FACTORY_NAME = "dtsfMain"
 }

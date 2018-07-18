@@ -1,6 +1,6 @@
 package com.collie.bgEra.cloudApp
 
-import java.io.{File, PrintWriter}
+import java.io.{File, InputStream, PrintWriter}
 import java.util.{Properties, UUID}
 
 import com.collie.bgEra.cloudApp.appm.ClusterInfo
@@ -90,9 +90,10 @@ class CloudAppContext(val projectName: String,
     initQuartzSchedProps()
     readDefaultDruidProp()
     genAppId()
+    this.appId = UUID.randomUUID().toString()
   }
 
-  private def genAppId(){
+  private def genAppId()={
     val filePath = System.getProperty("user.dir") + "/myid"
     val file = new File(filePath)
     var source: BufferedSource = null
@@ -128,13 +129,28 @@ class CloudAppContext(val projectName: String,
   }
 
   private def initQuartzSchedProps() = {
-    val quartzSchedPropLocations = "classpath:schedulerProp/*Scheduler.properties"
-    val resolver = new PathMatchingResourcePatternResolver()
-    val propRes: Array[Resource] = resolver.getResources(quartzSchedPropLocations)
-    var prop: Properties = null
-    propRes.foreach(propRes => {
-      prop = CommonUtils.readPropertiesFile("schedulerProp/" + propRes.getFile().getName)
-      quartzSchedPropMap.put(prop.getProperty("org.quartz.scheduler.instanceName"),prop)
-    })
+    var is: InputStream = this.getClass().getClassLoader().getResourceAsStream("schedulerProp/defaultScheduler.properties")
+    var prop = new Properties()
+    prop.load(is)
+    is.close()
+    quartzSchedPropMap.put(prop.getProperty("org.quartz.scheduler.instanceName"),prop)
+    is = this.getClass().getClassLoader().getResourceAsStream("schedulerProp/mainScheduler.properties")
+    prop = new Properties()
+    prop.load(is)
+    is.close()
+    quartzSchedPropMap.put(prop.getProperty("org.quartz.scheduler.instanceName"),prop)
+    is = this.getClass().getClassLoader().getResourceAsStream("schedulerProp/templateScheduler.properties")
+    prop = new Properties()
+    prop.load(is)
+    is.close()
+    quartzSchedPropMap.put(prop.getProperty("org.quartz.scheduler.instanceName"),prop)
+//    val quartzSchedPropLocations = "classpath:schedulerProp/*Scheduler.properties"
+//    val resolver = new PathMatchingResourcePatternResolver()
+//    val propRes: Array[Resource] = resolver.getResources(quartzSchedPropLocations)
+//    var prop: Properties = null
+//    propRes.foreach(propRes => {
+//      prop = CommonUtils.readPropertiesFile("schedulerProp/" + propRes.getFile().getName)
+//      quartzSchedPropMap.put(prop.getProperty("org.quartz.scheduler.instanceName"),prop)
+//    })
   }
 }

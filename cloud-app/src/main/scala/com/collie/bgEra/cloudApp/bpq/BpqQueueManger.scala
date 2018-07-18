@@ -1,35 +1,18 @@
 package com.collie.bgEra.cloudApp.bpq
 
-import java.util
-import java.util.Date
-
 import com.collie.bgEra.cloudApp.CloudAppContext
-import com.collie.bgEra.cloudApp.dtsf.impl.QuartzJob
 import com.collie.bgEra.cloudApp.redisCache.RedisService
-import org.apache.ibatis.session.SqlSessionFactory
-import org.quartz.impl.triggers.SimpleTriggerImpl
-import org.quartz.{JobBuilder, JobKey, Scheduler, TriggerBuilder}
+import com.collie.bgEra.cloudApp.utils.ContextHolder
 import org.slf4j.{Logger, LoggerFactory}
-import org.springframework.beans.factory.annotation.{Autowired, Qualifier}
-import org.springframework.stereotype.Component
 
-@Component
-class BpqQueueManger {
-  private val queueKeyPrefix = "bgEra.cloudApp.bpq"
 
-  @Autowired
-  private val redisService: RedisService = null
-  @Autowired
-  private val context: CloudAppContext = null
-
-  private val queueInfoMap: util.Map[String,Int] = new util.HashMap()
-
+class BpqQueueManger private(val appId: String, val queueId: String, val queueMaxLength: Int = 2000) {
+  private val redisKey = s"bgEra.cloudApp.bpq.${appId}_${queueId}"
+  private var redisService: RedisService = null
   private val logger: Logger = LoggerFactory.getLogger("bpq")
 
-  def pushItemToQueue(queueId:String, queueItem: QueueItem, maxLength: Int = 5000): Unit ={
-    savaQueueInfo(queueId,maxLength)
-    val redisKey = s"${queueKeyPrefix}.${context.getAppId()}_${queueId}"
-    if(redisService.listSize(redisKey) > getQueueMaxLength(queueId)){
+  def pushItemToQueue(queueItem: QueueItem): Unit ={
+    if(redisService.listSize(redisKey) > queueMaxLength){
       this.synchronized {
         this.wait()
       }
@@ -38,15 +21,13 @@ class BpqQueueManger {
     }
   }
 
-  def unshiftItemToQueue(queueId:String, queueItem: QueueItem): Unit ={
-    val redisKey = s"${queueKeyPrefix}.${context.getAppId()}_${queueId}"
+  def unshiftItemToQueue(queueItem: QueueItem): Unit ={
     redisService.listLpush(redisKey,queueItem)
   }
 
-  def popItemFromQueue(queueId:String): QueueItem={
-    val redisKey = s"${queueKeyPrefix}.${context.getAppId()}_${queueId}"
+  def popItemFromQueue(): QueueItem={
     val item = redisService.listLpop(redisKey).asInstanceOf[QueueItem]
-    if(redisService.listSize(redisKey) < getQueueMaxLength(queueId) * 0.8){
+    if(redisService.listSize(redisKey) < queueMaxLength * 0.9){
       this.synchronized{
         this.notifyAll()
       }
@@ -54,22 +35,17 @@ class BpqQueueManger {
     item
   }
 
-  def getQueueSize(queueId:String): Long ={
-    val redisKey = s"${queueKeyPrefix}.${context.getAppId()}_${queueId}"
+  def getQueueSize(): Long ={
     redisService.listSize(redisKey)
   }
+}
 
-  private def savaQueueInfo(queueId:String,maxLength: Integer): Unit ={
-    if(!queueInfoMap.containsKey(queueId)){
-      queueInfoMap.synchronized{
-        if(!queueInfoMap.containsKey(queueId)){
-          queueInfoMap.put(queueId,maxLength)
-        }
-      }
-    }
-  }
-
-  private def getQueueMaxLength(queueId:String): Int ={
-    queueInfoMap.get(queueId)
+object BpqQueueManger{
+  def apply(queueId: String, queueMaxLength: Int = 2000): BpqQueueManger ={
+    val appId = ContextHolder.getBean(classOf[CloudAppContext]).getAppId()
+    val redisService: RedisService =ContextHolder.getBean(classOf[RedisService])
+    val manger = new BpqQueueManger(appId,queueId,queueMaxLength)
+    manger.redisService = redisService
+    manger
   }
 }

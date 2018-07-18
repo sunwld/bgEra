@@ -101,7 +101,7 @@ class TaskManagerImpl extends TaskManager {
         //修改workUnit状态为running，并保存
         unit.thisTime = new ju.Date()
         unit.status = "RUNNING"
-        taskMapper.updateWorkUnitInfo(unit, session)
+        taskMapper.updateWorkUnitInfo(unit)
 
         //执行workunit
         val invokWorkUnitTimeStamp: Long = System.currentTimeMillis()
@@ -119,7 +119,7 @@ class TaskManagerImpl extends TaskManager {
           }
           case _ => 0
         }
-        taskMapper.updateWorkUnitInfo(unit, session)
+        taskMapper.updateWorkUnitInfo(unit)
       })
 
     } catch {
@@ -128,7 +128,7 @@ class TaskManagerImpl extends TaskManager {
           //task执行出现异常时，记录异常信息
           logger.error("task failed and log error, query dtf_errorlog for detail!", e)
           taskMapper.saveDtfErrorLog(TaskErrorBean(new ju.Date(), taskInfo.taskName, taskInfo.targetId,
-            null, context.appmClusterInfo.currentVotid, e.getMessage), session)
+            null, context.appmClusterInfo.currentVotid, e.getMessage))
         } catch {
           //如果记录异常信息出现异常，则直接打印异常信息
           case e2: Exception => logger.error("task failed and log error failed too!", e2)
@@ -151,7 +151,7 @@ class TaskManagerImpl extends TaskManager {
           try {
             //task执行出现异常时，记录异常信息
             taskMapper.saveDtfErrorLog(TaskErrorBean(new ju.Date(), taskInfo.taskName, taskInfo.targetId,
-              null, context.appmClusterInfo.currentVotid, e.getMessage), session)
+              null, context.appmClusterInfo.currentVotid, e.getMessage))
             logger.error("task failed and log error, query dtf_errorlog for detail!", e)
           } catch {
             //如果记录异常信息出现异常，则直接打印异常信息

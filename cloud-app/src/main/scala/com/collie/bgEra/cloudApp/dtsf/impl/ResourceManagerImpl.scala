@@ -16,11 +16,13 @@ import com.collie.bgEra.cloudApp.dtsf.mapper.TaskMapper
 import org.apache.ibatis.session.SqlSessionFactory
 import org.mybatis.spring.SqlSessionFactoryBean
 import org.springframework.beans.factory.annotation.Autowired
+import org.springframework.context.annotation.Lazy
 
 @Component
 class ResourceManagerImpl extends ResourceManager{
 
   @Autowired
+  @Lazy
   private val cloudAppContext: CloudAppContext = null
 
   @Autowired

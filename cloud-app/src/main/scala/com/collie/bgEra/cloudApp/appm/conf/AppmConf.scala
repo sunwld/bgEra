@@ -5,6 +5,7 @@ import com.collie.bgEra.cloudApp.appm.{AppManagerStandardSkill, ZApplicationMana
 import com.collie.bgEra.cloudApp.base.{BaseConf, ZookeeperSession}
 import com.collie.bgEra.cloudApp.dsla.DistributedServiceLatchArbitrator
 import com.collie.bgEra.cloudApp.redisCache.conf.RedisCacheConf
+import com.collie.bgEra.cloudApp.utils.ContextHolder
 import org.springframework.beans.factory.annotation.{Autowired, Qualifier, Value}
 import org.springframework.context.annotation.{Bean, ComponentScan, Configuration, Import}
 
@@ -20,7 +21,7 @@ import org.springframework.context.annotation.{Bean, ComponentScan, Configuratio
   */
 @Configuration
 @Import(Array(classOf[BaseConf]))
-@ComponentScan(Array("com.collie.bgEra.cloudApp.appm", "com.collie.bgEra.cloudApp.utils"))
+@ComponentScan(basePackages = Array("com.collie.bgEra.cloudApp.appm"),basePackageClasses = Array(classOf[ContextHolder]))
 class AppmConf {
   @Autowired
   @Qualifier("appManagerStandardSkill")

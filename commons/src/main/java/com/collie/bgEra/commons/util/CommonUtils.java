@@ -6,7 +6,10 @@ import org.springframework.core.io.ClassPathResource;
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.support.PathMatchingResourcePatternResolver;
 
+import java.io.File;
+import java.io.FileInputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.util.Properties;
 
 public class CommonUtils {
@@ -42,10 +45,38 @@ public class CommonUtils {
     }
 
     public static Properties readPropertiesFile(String path) throws IOException {
-        PropertiesFactoryBean propertiesFactoryBean = new PropertiesFactoryBean();
-        propertiesFactoryBean.setLocation(new ClassPathResource(path));
-        //在properties中的属性被读取并注入后再初始化对象
-        propertiesFactoryBean.afterPropertiesSet();
-        return propertiesFactoryBean.getObject();
+//        PropertiesFactoryBean propertiesFactoryBean = new PropertiesFactoryBean();
+//        propertiesFactoryBean.setLocation(new ClassPathResource(path));
+//        //在properties中的属性被读取并注入后再初始化对象
+//        propertiesFactoryBean.afterPropertiesSet();
+//        return propertiesFactoryBean.getObject();
+        InputStream is = null;
+        Properties prop;
+        try {
+            is = CommonUtils.class.getResourceAsStream(path);
+            prop = new Properties();
+            prop.load(is);
+            return prop;
+        } finally {
+            if(is != null){
+                is.close();
+            }
+        }
+    }
+
+    public static Properties readPropertiesFile(File file) throws IOException {
+        InputStream is = null;
+        Properties prop;
+        System.err.println(file.exists());
+        try {
+            is = new FileInputStream(file);
+            prop = new Properties();
+            prop.load(is);
+            return prop;
+        } finally {
+            if(is != null){
+                is.close();
+            }
+        }
     }
 }

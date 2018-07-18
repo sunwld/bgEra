@@ -11,6 +11,9 @@ import org.springframework.beans.factory.annotation.{Autowired, Qualifier}
 import org.springframework.stereotype.Repository
 import java.{util => ju}
 
+import com.collie.bgEra.cloudApp.bpq.{BpqQueueManger, QueueItem, SqlItem}
+import com.collie.bgEra.cloudApp.dtsf.conf.DtsfConf
+
 import scala.collection.JavaConversions._
 import scala.collection.mutable
 import scala.collection.mutable.ListBuffer
@@ -20,6 +23,10 @@ class TaskMapper {
   @Autowired
   @Qualifier("bgEra_dtsf_SqlSessionFactory")
   private val factory: SqlSessionFactory = null
+
+  @Autowired
+  @Qualifier("dtsfBpqQueueManager")
+  private val bpqManager: BpqQueueManger = null
 
   @Autowired
   val redisService: RedisService = null
@@ -170,44 +177,23 @@ class TaskMapper {
 
   @HsetPutItem(cacheKey = "'bgEra.cloudApp.dtsf.taskMap'", field = "#taskInfo.targetId+'||'+#taskInfo.taskName", hsetItemEl = "#taskInfo")
   def updateTaskInfo(taskInfo: TaskInfo, session: SqlSession) = {
-    val sql = NAMESPACE + ".updateTaskInfo"
-    session.update(sql, taskInfo)
-    session.commit()
+    val sqlItem = SqlItem(NAMESPACE + ".updateTaskInfo",SqlItem.UPDATE_SQL,taskInfo)
+    bpqManager.pushItemToQueue(QueueItem(DtsfConf.MAIN_SQL_FACTORY_NAME,sqlItem))
   }
 
   @HsetPutItem(cacheKey = "'bgEra.cloudApp.dtsf.workUnitMap'", field = "#unit.targetId+'||'+#unit.taskName+'||'+#unit.workUnitName", hsetItemEl = "#unit")
-  def updateWorkUnitInfo(unit: WorkUnitInfo, session: SqlSession) = {
-    val sql = NAMESPACE + ".updateWorkUnitInfo"
-    session.update(sql, unit)
-    session.commit()
+  def updateWorkUnitInfo(unit: WorkUnitInfo) = {
+    val sqlItem = SqlItem(NAMESPACE + ".updateWorkUnitInfo",SqlItem.UPDATE_SQL,unit)
+    bpqManager.pushItemToQueue(QueueItem(DtsfConf.MAIN_SQL_FACTORY_NAME,sqlItem))
   }
 
   @ZsetWeedoutByIndex(cacheKey = "'bgEra.cloudApp.dtsf.myTaskZset.'+#zkSessionId", addRecords = "#zsetList", keepRecords = -1)
   def giveBackTaskZsetList(zkSessionId: String, zsetList: ju.List[ZSetItemBean]): Unit = {}
 
-  def saveDtfErrorLog(error: TaskErrorBean) = {
-    val insertSql = NAMESPACE + ".saveDtfErrorLog"
-    var session: SqlSession = null
-    try {
-      session = factory.openSession(false)
-      session.insert(insertSql, error)
-      session.commit()
-    } catch {
-      case e: Exception => {
-        session.rollback()
-        throw e
-      }
-    } finally {
-      if (session != null) {
-        session.close()
-      }
-    }
-  }
 
-  def saveDtfErrorLog(error: TaskErrorBean, session: SqlSession) = {
-    val insertSql = NAMESPACE + ".saveDtfErrorLog"
-    session.insert(insertSql, error)
-    session.commit()
+  def saveDtfErrorLog(error: TaskErrorBean) = {
+    val sqlItem = SqlItem(NAMESPACE + ".saveDtfErrorLog",SqlItem.INSERT_SQL,error)
+    bpqManager.pushItemToQueue(QueueItem(DtsfConf.MAIN_SQL_FACTORY_NAME,sqlItem))
   }
 
   def flushDtsfRedisCache(): Unit = {

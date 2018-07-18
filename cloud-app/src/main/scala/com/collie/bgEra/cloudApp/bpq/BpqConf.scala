@@ -2,6 +2,7 @@ package com.collie.bgEra.cloudApp.bpq
 
 import com.collie.bgEra.cloudApp.CloudAppContext
 import com.collie.bgEra.cloudApp.redisCache.conf.RedisCacheConf
+import com.collie.bgEra.cloudApp.utils.ContextHolder
 import org.quartz.Scheduler
 import org.quartz.impl.StdSchedulerFactory
 import org.springframework.beans.factory.annotation.{Autowired, Qualifier}
@@ -21,7 +22,7 @@ import org.springframework.scheduling.quartz.{CronTriggerFactoryBean, SchedulerF
   *       sql statement 例如："com.collie.bgEra.cloudApp.dtsf.mapper.TaskMapper.qryAllTartInfo"
   */
 @Configuration
-@ComponentScan(basePackageClasses = Array(classOf[BpqQueueManger]))
+@ComponentScan(basePackageClasses = Array(classOf[BpqQueueManger],classOf[ContextHolder]))
 @Import(Array(classOf[RedisCacheConf]))
 class BpqConf {
   @Bean(Array("bpqQueueScheduler"))

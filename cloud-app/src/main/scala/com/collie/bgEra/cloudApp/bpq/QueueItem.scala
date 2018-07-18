@@ -14,12 +14,12 @@ class QueueItem private(@BeanProperty val factoryName: String,
 }
 
 object QueueItem{
-  def apply(actoryName: String,sqlItems: SqlItem*): QueueItem ={
-    new QueueItem(actoryName,SqlResult(),sqlItems:_*)
+  def apply(factoryName: String,sqlItems: SqlItem*): QueueItem ={
+    new QueueItem(factoryName,SqlResult(),sqlItems:_*)
   }
 
-  def apply(actoryName: String, result: SqlResult,sqlItems: SqlItem*): QueueItem ={
-    new QueueItem(actoryName,result,sqlItems:_*)
+  def apply(factoryName: String, result: SqlResult,sqlItems: SqlItem*): QueueItem ={
+    new QueueItem(factoryName,result,sqlItems:_*)
   }
 }
 

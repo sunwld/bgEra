@@ -14,7 +14,6 @@ import scala.collection.JavaConversions._
 @DisallowConcurrentExecution
 class BpqSqlQueueBus extends Job{
   private val logger: Logger = LoggerFactory.getLogger("bpq")
-  private val manager = ContextHolder.getBean(classOf[BpqQueueManger])
   private val appContext: CloudAppContext = ContextHolder.getBean(classOf[CloudAppContext])
 
   override def execute(context: JobExecutionContext): Unit = {
@@ -24,25 +23,24 @@ class BpqSqlQueueBus extends Job{
     var queueItem: QueueItem = null
 
     val jobDataMap = context.getJobDetail().getJobDataMap()
-    val queueId = jobDataMap.get("queueId").asInstanceOf[String]
+    val manager = jobDataMap.get("manager").asInstanceOf[BpqQueueManger]
     var modifyCount = 0
     var currSqlItem: SqlItem = null
     var factory:SqlSessionFactory = null
 
-    var base:Long = 0
-
     try{
-      val size = manager.getQueueSize(queueId)
+      val size = manager.getQueueSize()
       var i:Long = -1
       for(i <- Range(0,size.toInt)){
         modifyCount = 0
-        base = System.currentTimeMillis()
-        queueItem = manager.popItemFromQueue(queueId)
-        logger.debug(s"pop record from queue elaspe: ${System.currentTimeMillis() - base} ms .")
+        val beginTS = System.currentTimeMillis()
+        val popItemTS = System.currentTimeMillis()
+        queueItem = manager.popItemFromQueue()
+        logger.debug(s"pop record from queue elaspe: ${System.currentTimeMillis() - popItemTS} ms .")
         factory = appContext.getSqlSessionFactory(queueItem.factoryName)
         session = factory.openSession(false)
         try {
-          base = System.currentTimeMillis()
+          val processSqlTS = System.currentTimeMillis()
           queueItem.sqlItems.foreach(sqlItem => {
             currSqlItem = sqlItem
             modifyCount = sqlItem.sqlType match {
@@ -56,7 +54,8 @@ class BpqSqlQueueBus extends Job{
           queueItem.result.modifyCount = modifyCount
           queueItem.result.success = true
           session.commit()
-          logger.debug(s"process queueitem records elaspe: ${System.currentTimeMillis() - base} ms .")
+          logger.info(s"==============${System.currentTimeMillis() - beginTS} ms")
+          logger.debug(s"process queueitem records elaspe: ${System.currentTimeMillis() - processSqlTS} ms .")
         } catch {
           case e: Exception => {
             logger.error(s"Exeption occured! when execute sql item:${currSqlItem}",e)
@@ -66,7 +65,7 @@ class BpqSqlQueueBus extends Job{
                 oe.getCause match {
                   case _: SQLException => queueItem.result.finish = true
                   case _: Exception => {
-                    manager.unshiftItemToQueue(queueId,queueItem)
+                    manager.unshiftItemToQueue(queueItem)
                     return
                   }
                 }
