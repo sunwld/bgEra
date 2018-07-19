@@ -90,7 +90,6 @@ class CloudAppContext(val projectName: String,
     initQuartzSchedProps()
     readDefaultDruidProp()
     genAppId()
-    this.appId = UUID.randomUUID().toString()
   }
 
   private def genAppId()={
@@ -129,28 +128,22 @@ class CloudAppContext(val projectName: String,
   }
 
   private def initQuartzSchedProps() = {
-    var is: InputStream = this.getClass().getClassLoader().getResourceAsStream("schedulerProp/defaultScheduler.properties")
-    var prop = new Properties()
-    prop.load(is)
-    is.close()
-    quartzSchedPropMap.put(prop.getProperty("org.quartz.scheduler.instanceName"),prop)
-    is = this.getClass().getClassLoader().getResourceAsStream("schedulerProp/mainScheduler.properties")
-    prop = new Properties()
-    prop.load(is)
-    is.close()
-    quartzSchedPropMap.put(prop.getProperty("org.quartz.scheduler.instanceName"),prop)
-    is = this.getClass().getClassLoader().getResourceAsStream("schedulerProp/templateScheduler.properties")
-    prop = new Properties()
-    prop.load(is)
-    is.close()
-    quartzSchedPropMap.put(prop.getProperty("org.quartz.scheduler.instanceName"),prop)
-//    val quartzSchedPropLocations = "classpath:schedulerProp/*Scheduler.properties"
-//    val resolver = new PathMatchingResourcePatternResolver()
-//    val propRes: Array[Resource] = resolver.getResources(quartzSchedPropLocations)
-//    var prop: Properties = null
-//    propRes.foreach(propRes => {
-//      prop = CommonUtils.readPropertiesFile("schedulerProp/" + propRes.getFile().getName)
-//      quartzSchedPropMap.put(prop.getProperty("org.quartz.scheduler.instanceName"),prop)
-//    })
+
+    val dtsfSchedPropLocations = "classpath:schedulerProp/*Scheduler.properties"
+    val extendSchedPropLocations = "classpath:extendSchedulerProp/*Scheduler.properties"
+    val resolver = new PathMatchingResourcePatternResolver()
+    var prop: Properties = null
+
+    var propRes: Array[Resource] = resolver.getResources(dtsfSchedPropLocations)
+    propRes.foreach(propRes => {
+      prop = CommonUtils.readPropertiesFile(propRes.getFile())
+      quartzSchedPropMap.put(prop.getProperty("org.quartz.scheduler.instanceName"),prop)
+    })
+
+    propRes = resolver.getResources(extendSchedPropLocations)
+    propRes.foreach(propRes => {
+      prop = CommonUtils.readPropertiesFile(propRes.getFile())
+      quartzSchedPropMap.put(prop.getProperty("org.quartz.scheduler.instanceName"),prop)
+    })
   }
 }

@@ -53,7 +53,8 @@ public class ContextHolder implements ApplicationContextAware {
      */
     @SuppressWarnings("unchecked")
     public static <T> T getBean(String id) throws BeansException {
-        return (T) ctx.getBean(id);
+        Object bean = ctx.getBean(id);
+        return (T) bean;
     }
 
     public static void clearCtx() {

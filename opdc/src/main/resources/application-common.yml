@@ -5,10 +5,13 @@ spring:
     name: service-hi
   datasource:
     druid:
-      driver-class-name: oracle.jdbc.OracleDriver
-      username: scifmation
-      password: kxht#123
-      url: jdbc:oracle:thin:@133.96.9.118:7521:orcl
+      driver-class-name: com.mysql.jdbc.Driver
+#      username: root
+#      password: root
+#      url: jdbc:mysql://192.168.186.100:3306/swldb?characterEncoding=utf-8&useSSL=false
+      username: dtsf
+      password: 1234yjd
+      url: jdbc:mysql://133.96.6.1:3306/swldb?characterEncoding=utf-8&useSSL=false
       initial-size: 30
       min-idle: 30
       max-active: 100
