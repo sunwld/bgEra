@@ -3,7 +3,6 @@ package com.collie.bgEra.cloudApp.dsla
 import java.util.concurrent.{CountDownLatch, TimeUnit}
 
 import com.collie.bgEra.cloudApp.base.ZookeeperSession
-import com.collie.bgEra.cloudApp.utils.ContextHolder
 import org.apache.zookeeper.{CreateMode, KeeperException}
 import org.slf4j.{Logger, LoggerFactory}
 

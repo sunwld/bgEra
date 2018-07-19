@@ -1,7 +1,6 @@
 package com.collie.bgEra.cloudApp.redisCache.conf
 
 import com.collie.bgEra.cloudApp.dsla.DslaConf
-import com.collie.bgEra.cloudApp.utils.ContextHolder
 import org.springframework.context.annotation._
 
 

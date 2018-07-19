@@ -2,7 +2,7 @@ package com.collie.bgEra.cloudApp.redisCache
 
 import java.nio.charset.Charset
 
-import com.collie.bgEra.cloudApp.utils.{ContextHolder, KryoUtil}
+import com.collie.bgEra.cloudApp.utils.ContextHolder
 import org.springframework.beans.factory.annotation.{Autowired, Qualifier}
 import org.springframework.data.redis.serializer.StringRedisSerializer
 import org.springframework.stereotype.Component
@@ -10,6 +10,7 @@ import redis.clients.jedis.{JedisCluster, Tuple}
 import java.{util => ju}
 
 import com.collie.bgEra.cloudApp.CloudAppContext
+import com.collie.bgEra.cloudApp.kryoUtil.KryoUtil
 import com.collie.bgEra.cloudApp.redisCache.bean.ZSetItemBean
 
 import scala.collection.JavaConversions._

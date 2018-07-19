@@ -4,7 +4,6 @@ import java.sql.SQLException
 import java.util
 
 import com.collie.bgEra.cloudApp.CloudAppContext
-import com.collie.bgEra.cloudApp.utils.ContextHolder
 import org.apache.ibatis.session.{SqlSession, SqlSessionFactory}
 import org.quartz.{DisallowConcurrentExecution, Job, JobExecutionContext}
 import org.slf4j.{Logger, LoggerFactory}

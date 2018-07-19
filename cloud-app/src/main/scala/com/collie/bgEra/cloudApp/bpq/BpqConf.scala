@@ -2,7 +2,6 @@ package com.collie.bgEra.cloudApp.bpq
 
 import com.collie.bgEra.cloudApp.CloudAppContext
 import com.collie.bgEra.cloudApp.redisCache.conf.RedisCacheConf
-import com.collie.bgEra.cloudApp.utils.ContextHolder
 import org.quartz.Scheduler
 import org.quartz.impl.StdSchedulerFactory
 import org.springframework.beans.factory.annotation.{Autowired, Qualifier}
