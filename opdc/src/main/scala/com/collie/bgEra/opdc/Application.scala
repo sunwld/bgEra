@@ -1,6 +1,7 @@
 package com.collie.bgEra.opdc
 
 import com.collie.bgEra.cloudApp.utils.ContextHolder
+import com.collie.bgEra.opdcConf.{ConfToDtsf, ConfToTest}
 import org.springframework.boot.SpringApplication
 import org.springframework.boot.autoconfigure.SpringBootApplication
 import org.springframework.web.servlet.config.annotation._
@@ -8,8 +9,9 @@ import org.springframework.context.annotation._
 
 //@EnableEurekaClient
 //@EnableDiscoveryClient
-//@Import(Array(classOf[ConfToDtsf]))
-@SpringBootApplication(scanBasePackages = Array("com.collie.bgEra.opdc"),scanBasePackageClasses = Array(classOf[ContextHolder]))
+//@Import(Array(classOf[ConfToTest]))
+@Import(Array(classOf[ConfToDtsf]))
+@SpringBootApplication(scanBasePackages = Array("com.collie.bgEra.opdc"))
 class Config extends WebMvcConfigurationSupport{
 //    @Bean(name = Array("dataSource"))
 //    @ConfigurationProperties(prefix = "spring.datasource.druid")

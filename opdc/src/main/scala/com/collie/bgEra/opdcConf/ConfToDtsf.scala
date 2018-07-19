@@ -1,4 +1,4 @@
-package com.collie.bgEra.opdc
+package com.collie.bgEra.opdcConf
 
 import java.util.Properties
 import java.{util => ju}
