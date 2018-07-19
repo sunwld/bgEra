@@ -11,7 +11,7 @@ import org.springframework.context.annotation._
 //@EnableDiscoveryClient
 //@Import(Array(classOf[ConfToTest]))
 @Import(Array(classOf[ConfToDtsf]))
-@SpringBootApplication(scanBasePackages = Array("com.collie.bgEra.opdc"))
+@SpringBootApplication(scanBasePackages = Array("com.collie.bgEra.opdc"),scanBasePackageClasses = Array(classOf[ContextHolder]))
 class Config extends WebMvcConfigurationSupport{
 //    @Bean(name = Array("dataSource"))
 //    @ConfigurationProperties(prefix = "spring.datasource.druid")

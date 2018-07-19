@@ -1,8 +1,12 @@
 package com.collie.bgEra.cloudApp.bpq
 
+import java.util.Date
+
 import com.collie.bgEra.cloudApp.CloudAppContext
 import com.collie.bgEra.cloudApp.redisCache.RedisService
 import com.collie.bgEra.cloudApp.utils.ContextHolder
+import org.quartz.impl.triggers.SimpleTriggerImpl
+import org.quartz.{JobBuilder, JobKey, Scheduler, TriggerBuilder}
 import org.slf4j.{Logger, LoggerFactory}
 
 
@@ -46,6 +50,25 @@ object BpqQueueManger{
     val redisService: RedisService =ContextHolder.getBean(classOf[RedisService])
     val manger = new BpqQueueManger(appId,queueId,queueMaxLength)
     manger.redisService = redisService
+
+    val group = s"${queueId}Group"
+    //如果当前scheduler不存在此job，则填充此job
+    val jobkey = new JobKey(queueId + "_job", group)
+    val scheduler = ContextHolder.getBean("bpqQueueScheduler").asInstanceOf[Scheduler]
+    if (scheduler.getJobDetail(jobkey) == null) {
+      val jobDetail = JobBuilder.newJob(classOf[BpqSqlQueueBus]).withIdentity(jobkey).build()
+      //将传入的JobBean对象放到JobDataMap对象中，这样当此job运行时，可以获取JobBean对象
+      val jobDataMap = jobDetail.getJobDataMap
+      jobDataMap.put("manager", manger)
+      val trigger = TriggerBuilder.newTrigger().withIdentity(queueId + "_Trigger", group).build().asInstanceOf[SimpleTriggerImpl]
+      //只执行一次，并且立刻执行
+      trigger.setStartTime(new Date())
+      trigger.setRepeatInterval(1000)
+      trigger.setRepeatCount(-1)
+      scheduler.scheduleJob(jobDetail, trigger)
+    }else {
+      manger.logger.info(s"BPQ queue $queueId already exists!")
+    }
     manger
   }
 }

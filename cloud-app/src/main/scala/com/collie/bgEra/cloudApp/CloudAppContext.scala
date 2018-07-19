@@ -136,7 +136,7 @@ class CloudAppContext(val projectName: String,
 
     var propRes: Array[Resource] = resolver.getResources(dtsfSchedPropLocations)
     propRes.foreach(propRes => {
-      prop = CommonUtils.readPropertiesFile(propRes.getFile())
+      prop = CommonUtils.readPropertiesFile("schedulerProp/" + propRes.getFilename())
       quartzSchedPropMap.put(prop.getProperty("org.quartz.scheduler.instanceName"),prop)
     })
 
