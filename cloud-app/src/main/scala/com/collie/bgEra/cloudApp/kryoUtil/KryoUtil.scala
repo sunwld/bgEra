@@ -5,7 +5,9 @@ import com.esotericsoftware.kryo.io.{Input, Output}
 import java.io.ByteArrayInputStream
 import java.io.ByteArrayOutputStream
 import java.io.UnsupportedEncodingException
-import java.util
+import java.text.SimpleDateFormat
+import java.util.concurrent.ConcurrentHashMap
+import java.{lang, util}
 
 import com.esotericsoftware.kryo.Kryo
 import org.apache.commons.codec.binary.Base64
@@ -14,6 +16,7 @@ import org.slf4j.{Logger, LoggerFactory}
 import scala.collection.JavaConversions._
 import scala.collection.mutable
 import scala.collection.mutable.ListBuffer
+import java.util.{Calendar, Date}
 
 
 object KryoUtil {
@@ -48,26 +51,55 @@ object KryoUtil {
       kryo.getInstantiatorStrategy.asInstanceOf[Kryo.DefaultInstantiatorStrategy].setFallbackInstantiatorStrategy(new StdInstantiatorStrategy)
 
       //Regist class map to kryo, sample classes begin 101 to 150, app classes > 150
-      logger.info("Regist class of util.HashMap to kryo[101]. ")
+      logger.info("Regist class of scala sample objects to kryo[101-130]. ")
       kryo.register(classOf[util.HashMap[_, _]], 101)
-      logger.info("Regist class of util.ArrayList to kryo[102]. ")
       kryo.register(classOf[util.ArrayList[_]], 102)
-      logger.info("Regist class of scala.ListBuffer to kryo[103]. ")
       kryo.register(classOf[ListBuffer[_]], 103)
-      logger.info("Regist class of scala.Seq to kryo[104]. ")
       kryo.register(classOf[mutable.Seq[_]], 104)
-      logger.info("Regist class of scala.mutable.Map to kryo[105]. ")
       kryo.register(classOf[mutable.Map[_, _]], 105)
-      logger.info("Regist class of scala.mutable.HashMap to kryo[106]. ")
       kryo.register(classOf[mutable.HashMap[_, _]], 106)
-      logger.info("Regist class of util.Map to kryo[107]. ")
       kryo.register(classOf[util.Map[_, _]], 107)
-      logger.info("Regist class of util.List to kryo[108]. ")
       kryo.register(classOf[util.List[_]], 108)
-      logger.info("Regist class of String to kryo[109]. ")
       kryo.register(classOf[String], 109)
+      kryo.register(classOf[Int], 110)
+      kryo.register(classOf[Float], 111)
+      kryo.register(classOf[Long], 112)
+      kryo.register(classOf[Double], 113)
+      //      kryo.register(classOf[Array[String]], 114)
+      //      kryo.register(classOf[Array[Int]], 115)
+      //      kryo.register(classOf[Array[Float]], 116)
+      //      kryo.register(classOf[Array[Long]], 117)
+      //      kryo.register(classOf[Array[Double]], 118)
+      //      kryo.register(classOf[Array[Any]], 119)
+//      kryo.register(classOf[Array[Any]], 119)
+      kryo.register(classOf[Array[_]], 120)
+      //      kryo.register(classOf[Array[Byte]], 121)
+      //      kryo.register(classOf[Array[Char]], 122)
+      kryo.register(classOf[BigDecimal], 123)
+      logger.info("Regist class of java sample objects to kryo[130-150]. ")
+      //      kryo.register(classOf[Array[lang.String]], 130)
+      //      kryo.register(classOf[Array[lang.Integer]], 131)
+      //      kryo.register(classOf[Array[lang.Float]], 132)
+      //      kryo.register(classOf[Array[lang.Long]], 133)
+      //      kryo.register(classOf[Array[lang.Double]], 134)
+      //      kryo.register(classOf[Array[Object]], 135)
+      //      kryo.register(classOf[Array[lang.Byte]], 136)
+      //      kryo.register(classOf[Array[StringBuffer]], 137)
+      kryo.register(classOf[Date], 138)
+      kryo.register(classOf[java.math.BigDecimal], 139)
+      kryo.register(classOf[util.HashMap[_]], 140)
+      kryo.register(classOf[util.ArrayList[_]], 141)
+      kryo.register(classOf[util.LinkedList[_]], 142)
+      kryo.register(classOf[util.HashSet[_]], 143)
+      kryo.register(classOf[util.TreeSet[_]], 144)
+      kryo.register(classOf[util.Hashtable[_]], 145)
+      kryo.register(classOf[ConcurrentHashMap[_]], 146)
+      kryo.register(classOf[Vector[_]], 148)
+      kryo.register(classOf[ConcurrentHashMap[_]], 150)
+      kryo.register(classOf[SimpleDateFormat], 147)
+      kryo.register(classOf[Object], 149)
 
-      var regId: Int = 151
+      var regId: Int = 200
       if (kryoMoudleClassMap != null && !kryoMoudleClassMap.isEmpty()) {
         kryoMoudleClassMap.foreach(x => {
           x._2.foreach(i => {
