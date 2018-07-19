@@ -13,19 +13,24 @@ import java.{util => ju}
 
 import com.collie.bgEra.cloudApp.bpq.{BpqQueueManger, QueueItem, SqlItem}
 import com.collie.bgEra.cloudApp.dtsf.conf.DtsfConf
+import com.collie.bgEra.cloudApp.kryoUtil.KryoUtil
+import org.slf4j.{Logger, LoggerFactory}
 
 import scala.collection.JavaConversions._
 import scala.collection.mutable
-import scala.collection.mutable.ListBuffer
 
 @Repository
 class TaskMapper {
+  private val logger: Logger = LoggerFactory.getLogger("dtsf")
+
   @Autowired
   @Qualifier("bgEra_dtsf_SqlSessionFactory")
   private val factory: SqlSessionFactory = null
 
   @Autowired
   val redisService: RedisService = null
+
+  private val kryoUtil: KryoUtil.type = KryoUtil
 
   private val NAMESPACE: String = "com.collie.bgEra.cloudApp.dtsf.mapper.TaskMapper"
 
@@ -190,6 +195,79 @@ class TaskMapper {
   @ZsetWeedoutByIndex(cacheKey = "'bgEra.cloudApp.dtsf.myTaskZset.'+#zkSessionId", addRecords = "#zsetList", keepRecords = -1)
   def giveBackTaskZsetList(zkSessionId: String, zsetList: ju.List[ZSetItemBean]): Unit = {}
 
+  def flushTaskStatusToDB(zkSessionId: String): Unit ={
+    val begin = System.currentTimeMillis()
+    val targetList: util.List[String] = getTargetShardingBySessionId(zkSessionId)
+
+    val allTask: util.Map[String, Array[Byte]] = redisService.hsetGetAllNoVlueDeser("bgEra.cloudApp.dtsf.taskMap")
+    val allWorkUnit: util.Map[String, Array[Byte]] = redisService.hsetGetAllNoVlueDeser("bgEra.cloudApp.dtsf.workUnitMap")
+    val myTaskIds = qryMyTaskIdListByTargets(zkSessionId,targetList)
+    val myWorkUnitIds = qryMyWorkUnitIdListByTargets(zkSessionId,targetList)
+    logger.trace(s"flushTaskStatusToDB  get task and workunit infos times : ${System.currentTimeMillis() - begin}")
+    if(allTask == null || allWorkUnit == null || myTaskIds == null || myWorkUnitIds == null ||
+        allTask.isEmpty() || allWorkUnit.isEmpty() || myTaskIds.isEmpty() || myWorkUnitIds.isEmpty()){
+      return
+    }
+    val taskSql = NAMESPACE + ".updateTaskInfo"
+    val workUnitSql = NAMESPACE + ".updateWorkUnitInfo"
+    var session: SqlSession = null
+    try {
+      session = factory.openSession(false)
+
+      myTaskIds.foreach(id => {
+        val t = allTask.get(id)
+        if(t!=null){
+          session.update(taskSql,kryoUtil.readFromByteArray(t))
+        }
+      })
+      session.commit()
+      myWorkUnitIds.foreach(id => {
+        val w = allWorkUnit.get(id)
+        if(w != null){
+          session.update(workUnitSql,kryoUtil.readFromByteArray(w))
+        }
+      })
+      session.commit()
+
+      logger.trace(s"flushTaskStatusToDB total times : ${System.currentTimeMillis() - begin}")
+    } finally {
+      if (session != null) {
+        session.close()
+      }
+    }
+  }
+
+  @CacheObject(expireTime = -1,cacheKey = "'bgEra.cloudApp.dtsf.myTaskIds.'+#zkSessionId")
+  private def qryMyTaskIdListByTargets(zkSessionId: String, targetList: util.List[String]): util.List[String] = {
+    val sql = NAMESPACE + ".qryMyTaskIdListByTargets"
+    var session: SqlSession = null
+    var result: java.util.List[String] = new util.ArrayList()
+    try {
+      session = factory.openSession(false)
+      result = session.selectList(sql, targetList)
+      result
+    } finally {
+      if (session != null) {
+        session.close()
+      }
+    }
+  }
+
+  @CacheObject(expireTime = -1,cacheKey = "'bgEra.cloudApp.dtsf.myWorkUnitIds.'+#zkSessionId")
+  private def qryMyWorkUnitIdListByTargets(zkSessionId: String, targetList: util.List[String]): util.List[String] = {
+    val sql = NAMESPACE + ".qryMyWorkUnitIdListByTargets"
+    var session: SqlSession = null
+    var result: java.util.List[String] = new util.ArrayList()
+    try {
+      session = factory.openSession(false)
+      result = session.selectList(sql, targetList)
+      result
+    } finally {
+      if (session != null) {
+        session.close()
+      }
+    }
+  }
 
   def saveDtfErrorLog(error: TaskErrorBean) = {
     val sql = NAMESPACE + ".saveDtfErrorLog"
@@ -216,7 +294,11 @@ class TaskMapper {
         "bgEra.cloudApp.dtsf.allShardTargetInfo", "bgEra.cloudApp.dtsf.TargetHset",
         "bgEra.cloudApp.dtsf.taskMap", "bgEra.cloudApp.dtsf.workUnitMap")
       val zkSessionIdList: ju.List[String] = session.selectList(sql)
-      zkSessionIdList.foreach(sessionId => redisService.delKey(s"bgEra.cloudApp.dtsf.myTaskZset.${sessionId}"))
+      zkSessionIdList.foreach(sessionId => {
+        redisService.delKey(s"bgEra.cloudApp.dtsf.myTaskZset.${sessionId}")
+        redisService.delKey(s"bgEra.cloudApp.dtsf.myTaskIds.${sessionId}")
+        redisService.delKey(s"bgEra.cloudApp.dtsf.myWorkUnitIds.${sessionId}")
+      })
       keys.foreach(redisService.delKey(_))
     } catch {
       case e: Exception => {

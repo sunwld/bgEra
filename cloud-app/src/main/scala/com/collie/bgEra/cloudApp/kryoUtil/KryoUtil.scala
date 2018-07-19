@@ -64,6 +64,8 @@ object KryoUtil {
       kryo.register(classOf[util.Map[_, _]], 107)
       logger.info("Regist class of util.List to kryo[108]. ")
       kryo.register(classOf[util.List[_]], 108)
+      logger.info("Regist class of String to kryo[109]. ")
+      kryo.register(classOf[String], 109)
 
       var regId: Int = 151
       if (kryoMoudleClassMap != null && !kryoMoudleClassMap.isEmpty()) {

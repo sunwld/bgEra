@@ -13,6 +13,7 @@ import java.{util => ju}
 
 import com.alibaba.druid.pool.DruidDataSource
 import com.collie.bgEra.cloudApp.dtsf.mapper.TaskMapper
+import com.collie.bgEra.cloudApp.utils.ContextHolder
 import org.apache.ibatis.session.SqlSessionFactory
 import org.mybatis.spring.SqlSessionFactoryBean
 import org.springframework.beans.factory.annotation.Autowired
@@ -21,12 +22,16 @@ import org.springframework.context.annotation.Lazy
 @Component
 class ResourceManagerImpl extends ResourceManager{
 
-  @Autowired
-  @Lazy
-  private val cloudAppContext: CloudAppContext = null
+  private var cloudAppContext: CloudAppContext =  null
 
   @Autowired
   private val taskMapper: TaskMapper = null
+
+  init()
+  private def init() ={
+    cloudAppContext = ContextHolder.getBean(classOf[CloudAppContext])
+    cloudAppContext.setResourceManager(this)
+  }
 
   override def getDataSourceResource(resourceName: String): SqlSessionFactory = {
     cloudAppContext.getSqlSessionFactory(resourceName)

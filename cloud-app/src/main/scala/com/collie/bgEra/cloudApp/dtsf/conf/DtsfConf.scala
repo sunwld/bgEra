@@ -1,7 +1,7 @@
 package com.collie.bgEra.cloudApp.dtsf.conf
 
 import java.util
-import java.util.Date
+import java.util.concurrent.{Executor, Executors}
 
 import com.alibaba.druid.pool.DruidDataSource
 import com.collie.bgEra.cloudApp.CloudAppContext
@@ -14,12 +14,13 @@ import com.collie.bgEra.cloudApp.redisCache.conf.RedisCacheConf
 import com.collie.bgEra.cloudApp.utils.ContextHolder
 import com.collie.bgEra.commons.util.CommonUtils
 import org.mybatis.spring.SqlSessionFactoryBean
-import org.quartz.impl.triggers.SimpleTriggerImpl
 import org.quartz._
 import org.slf4j.{Logger, LoggerFactory}
 import org.springframework.beans.factory.annotation.{Autowired, Qualifier}
 import org.springframework.context.annotation.{Bean, ComponentScan, Configuration, Import}
 import org.springframework.core.io.support.PathMatchingResourcePatternResolver
+import org.springframework.scheduling.annotation.{EnableScheduling, SchedulingConfigurer}
+import org.springframework.scheduling.config.ScheduledTaskRegistrar
 import org.springframework.scheduling.quartz.{CronTriggerFactoryBean, MethodInvokingJobDetailFactoryBean, SchedulerFactoryBean}
 
 /**
@@ -41,9 +42,10 @@ import org.springframework.scheduling.quartz.{CronTriggerFactoryBean, MethodInvo
   * redis数据源：jedisCluster：JedisCluster
   */
 @Configuration
+@EnableScheduling
 @Import(Array(classOf[AppmConf], classOf[RedisCacheConf], classOf[BpqConf]))
 @ComponentScan(Array("com.collie.bgEra.cloudApp.dtsf", "com.collie.bgEra.cloudApp.utils"))
-class DtsfConf {
+class DtsfConf extends SchedulingConfigurer{
   private val logger: Logger = LoggerFactory.getLogger("dtsf")
 
   init()
@@ -101,7 +103,9 @@ class DtsfConf {
     scheduler
   }
 
-
+  override def configureTasks(taskRegistrar: ScheduledTaskRegistrar): Unit = {
+    taskRegistrar.setScheduler(Executors.newScheduledThreadPool(10))
+  }
 }
 
 object DtsfConf {

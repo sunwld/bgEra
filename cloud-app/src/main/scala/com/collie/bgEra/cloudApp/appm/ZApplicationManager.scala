@@ -4,6 +4,7 @@ import java.util
 
 import com.collie.bgEra.cloudApp.appm.watchers.{ClusterStatusWatcher, ClusterVersionWatcher, PreNodeWatcher, VoteNodeWatcher}
 import com.collie.bgEra.cloudApp.base.ZookeeperSession
+import com.collie.bgEra.cloudApp.utils.ContextHolder
 import org.apache.zookeeper.{CreateMode, KeeperException}
 import org.slf4j.{Logger, LoggerFactory}
 

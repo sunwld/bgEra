@@ -22,8 +22,11 @@ import scala.io.{BufferedSource, Source}
 class CloudAppContext(val projectName: String,
                       val minLiveServCount: Int, val clusterInitServCount: Int) {
 
-  @Autowired(required = false)
-  val resourceManager: ResourceManager = null
+  private var resourceManager: ResourceManager = null
+
+  def setResourceManager(rm: ResourceManager): Unit = {
+    this.resourceManager = rm
+  }
 
   val quartzSchedPropMap: mutable.Map[String,Properties] = new mutable.HashMap()
   val dbSqlSessionFactoyMap: ju.Map[String,SqlSessionFactory] = new ju.HashMap()

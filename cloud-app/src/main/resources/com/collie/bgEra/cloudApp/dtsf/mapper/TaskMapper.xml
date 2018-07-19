@@ -61,15 +61,37 @@
     where zksession = #{zkSessionId}
   </select>
 
-    <select id="qryPerpredTaskListByTargets" parameterType="java.util.List"
-            resultType="com.collie.bgEra.cloudApp.dtsf.bean.TaskInfo">
-        SELECT t.taskid taskId,targetid targetId,taskname taskName,nexttime nextTime
-        FROM dtf_task_runtime t
-        where t.targetid in
-        <foreach collection="list" index="index" item="item" open="(" separator="," close=")">
-            #{item}
-        </foreach>
-    </select>
+  <select id="qryPerpredTaskListByTargets" parameterType="java.util.List"
+          resultType="com.collie.bgEra.cloudApp.dtsf.bean.TaskInfo">
+      SELECT t.taskid taskId,targetid targetId,taskname taskName,nexttime nextTime
+      FROM dtf_task_runtime t
+      where t.targetid in
+      <foreach collection="list" index="index" item="item" open="(" separator="," close=")">
+          #{item}
+      </foreach>
+  </select>
+
+  <select id="qryMyTaskIdListByTargets" parameterType="java.util.List"
+          resultType="String">
+    SELECT t.taskid taskId
+    FROM dtf_task_runtime t
+    where t.targetid in
+    <foreach collection="list" index="index" item="item" open="(" separator="," close=")">
+      #{item}
+    </foreach>
+    order by t.taskid
+  </select>
+
+  <select id="qryMyWorkUnitIdListByTargets" parameterType="java.util.List"
+          resultType="String">
+    SELECT t.wkunitid
+    FROM dtf_wkunit_runtime t
+    where t.targetid in
+    <foreach collection="list" index="index" item="item" open="(" separator="," close=")">
+      #{item}
+    </foreach>
+    order by t.wkunitid
+  </select>
 
     <select id="qryTaskInfoById" parameterType="String"
             resultType="com.collie.bgEra.cloudApp.dtsf.bean.TaskInfo">
@@ -92,7 +114,7 @@
      AND t.wkunitname = a.name
   </select>
 
-    <update id="updateTaskInfo" parameterType="com.collie.bgEra.cloudApp.dtsf.bean.TaskInfo">
+  <update id="updateTaskInfo" parameterType="com.collie.bgEra.cloudApp.dtsf.bean.TaskInfo">
     UPDATE dtf_task_runtime t SET t.status = #{status},
       t.errors=#{errors},t.thistime=#{thisTime},nexttime=#{nextTime}
     WHERE t.taskid = #{taskId}
