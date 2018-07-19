@@ -69,28 +69,6 @@ class DtsfConf {
     sqlSessionFactoryBean
   }
 
-  @Bean(Array("dtsfBpqQueueManager"))
-  def dtsfBpqQueueManager(@Qualifier("bpqQueueScheduler") bpqQueueScheduler: Scheduler,
-                          @Autowired context: CloudAppContext): BpqQueueManger = {
-    val queueId = "DTSF"
-    val manager = BpqQueueManger(queueId, 500)
-    val group = s"${queueId}Group"
-    //如果当前scheduler不存在此job，则填充此job
-    val jobkey = new JobKey(queueId + "_job", group)
-    val jobDetail = JobBuilder.newJob(classOf[BpqSqlQueueBus]).withIdentity(jobkey).build()
-    //将传入的JobBean对象放到JobDataMap对象中，这样当此job运行时，可以获取JobBean对象
-    val jobDataMap = jobDetail.getJobDataMap
-    jobDataMap.put("manager", manager)
-    val trigger = TriggerBuilder.newTrigger().withIdentity(queueId + "_Trigger", group).build().asInstanceOf[SimpleTriggerImpl]
-    //只执行一次，并且立刻执行
-    trigger.setStartTime(new Date())
-    trigger.setRepeatInterval(1000)
-    trigger.setRepeatCount(-1)
-    bpqQueueScheduler.scheduleJob(jobDetail, trigger)
-
-    manager
-  }
-
   @Bean(name = Array("mainJobDetail"))
   def jobDetail(@Qualifier("distributedTaskBus") bus: DistributedTaskBus): MethodInvokingJobDetailFactoryBean = {
     val jobDetailFactoryBean: MethodInvokingJobDetailFactoryBean = new MethodInvokingJobDetailFactoryBean()

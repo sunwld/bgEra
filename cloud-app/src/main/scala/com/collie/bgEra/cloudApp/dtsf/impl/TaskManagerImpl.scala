@@ -58,10 +58,7 @@ class TaskManagerImpl extends TaskManager {
     var exceptionUnitSize = 0
     val nextTimeSched: TaskSchedule = ContextHolder.getBean(taskInfo.taskSchedulerBean)
 
-    var session: SqlSession = null
     try {
-      session = factory.openSession(false)
-
       var taskLock: Object = taskLockMap.get(taskInfo.taskId)
       if (taskLock == null) {
         lock.synchronized {
@@ -87,7 +84,7 @@ class TaskManagerImpl extends TaskManager {
         //修改task状态为running，并保存
         taskInfo.thisTime = new ju.Date()
         taskInfo.status = "RUNNING"
-        taskMapper.updateTaskInfo(taskInfo, session)
+        taskMapper.updateTaskInfo(taskInfo)
       }
       val lockTimeLong = System.currentTimeMillis() - lockTimeStamp
       logger.debug(s"run task check elapse $lockTimeLong ms,task:$taskInfo")
@@ -97,7 +94,7 @@ class TaskManagerImpl extends TaskManager {
       var unitResult: WorkUnitResult = null
       workUnitIds.foreach(unitId => {
         //根据 targetId, taskName,unitName查询出对应的 workUnit对象
-        val unit = taskMapper.qryWorkUnitInfoById(unitId, session)
+        val unit = taskMapper.qryWorkUnitInfoById(unitId)
         //修改workUnit状态为running，并保存
         unit.thisTime = new ju.Date()
         unit.status = "RUNNING"
@@ -144,7 +141,7 @@ class TaskManagerImpl extends TaskManager {
           case 0 => 0
           case _ => taskInfo.errors + exceptionUnitSize
         }
-        taskMapper.updateTaskInfo(taskInfo, session)
+        taskMapper.updateTaskInfo(taskInfo)
       } catch {
         case e: Exception => {
           e.printStackTrace()
@@ -159,10 +156,6 @@ class TaskManagerImpl extends TaskManager {
           }
         }
       } finally {
-        if (session != null) {
-          session.commit()
-          session.close()
-        }
         //将task重新放入到缓存中
         taskMapper.giveBackTaskZsetList(context.appmClusterInfo.currentVotid,
           ju.Arrays.asList(ZSetItemBean(taskInfo.taskId, taskInfo.nextTime.getTime())))

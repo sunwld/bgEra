@@ -2,6 +2,7 @@ package com.collie.bgEra.cloudApp.bpq
 
 import com.collie.bgEra.cloudApp.CloudAppContext
 import com.collie.bgEra.cloudApp.redisCache.RedisService
+import com.collie.bgEra.cloudApp.utils.ContextHolder
 import org.slf4j.{Logger, LoggerFactory}
 
 
