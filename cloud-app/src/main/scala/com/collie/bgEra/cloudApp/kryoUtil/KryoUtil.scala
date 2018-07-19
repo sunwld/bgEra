@@ -1,21 +1,37 @@
-package com.collie.bgEra.cloudApp.utils
+package com.collie.bgEra.cloudApp.kryoUtil
 
 import org.objenesis.strategy.StdInstantiatorStrategy
 import com.esotericsoftware.kryo.io.{Input, Output}
 import java.io.ByteArrayInputStream
 import java.io.ByteArrayOutputStream
 import java.io.UnsupportedEncodingException
-import com.esotericsoftware.kryo.Kryo
+import java.util
 
+import com.esotericsoftware.kryo.Kryo
 import org.apache.commons.codec.binary.Base64
+import org.slf4j.{Logger, LoggerFactory}
+
+import scala.collection.JavaConversions._
+import scala.collection.mutable
+import scala.collection.mutable.ListBuffer
+
 
 object KryoUtil {
+  private val logger: Logger = LoggerFactory.getLogger("kryoUtil")
   private val DEFAULT_ENCODING = "UTF-8"
   //每个线程的 Kryo 实例//每个线程的 Kryo 实例
 
+  private val kryoMoudleClassMap: util.Map[Integer, util.List[Class[_]]] = new util.TreeMap[Integer, util.List[Class[_]]]()
+
+  def addMoudleClassList(moduleOrder: Integer, classList: util.List[Class[_]]): Unit = {
+    kryoMoudleClassMap.synchronized {
+      kryoMoudleClassMap.put(moduleOrder, classList)
+    }
+  }
+
   private val kryoLocal = new ThreadLocal[Kryo]() {
     override protected def initialValue: Kryo = {
-      val kryo = new Kryo
+      val kryo = new Kryo()
 
       /**
         * 不要轻易改变这里的配置！更改之后，序列化的格式就会发生变化，
@@ -26,10 +42,40 @@ object KryoUtil {
       kryo.setReferences(true) //默认值就是 true，添加此行的目的是为了提醒维护者，不要改变这个配置
 
       //不强制要求注册类（注册行为无法保证多个 JVM 内同一个类的注册编号相同；而且业务系统中大量的 Class 也难以一一注册）
-      kryo.setRegistrationRequired(false) //默认值就是 false，添加此行的目的是为了提醒维护者，不要改变这个配置
+      //kryo.setRegistrationRequired(false) //默认值就是 false，添加此行的目的是为了提醒维护者，不要改变这个配置
 
       //Fix the NPE bug when deserializing Collections.
       kryo.getInstantiatorStrategy.asInstanceOf[Kryo.DefaultInstantiatorStrategy].setFallbackInstantiatorStrategy(new StdInstantiatorStrategy)
+
+      //Regist class map to kryo, sample classes begin 101 to 150, app classes > 150
+      logger.info("Regist class of util.HashMap to kryo[101]. ")
+      kryo.register(classOf[util.HashMap[_, _]], 101)
+      logger.info("Regist class of util.ArrayList to kryo[102]. ")
+      kryo.register(classOf[util.ArrayList[_]], 102)
+      logger.info("Regist class of scala.ListBuffer to kryo[103]. ")
+      kryo.register(classOf[ListBuffer[_]], 103)
+      logger.info("Regist class of scala.Seq to kryo[104]. ")
+      kryo.register(classOf[mutable.Seq[_]], 104)
+      logger.info("Regist class of scala.mutable.Map to kryo[105]. ")
+      kryo.register(classOf[mutable.Map[_, _]], 105)
+      logger.info("Regist class of scala.mutable.HashMap to kryo[106]. ")
+      kryo.register(classOf[mutable.HashMap[_, _]], 106)
+      logger.info("Regist class of util.Map to kryo[107]. ")
+      kryo.register(classOf[util.Map[_, _]], 107)
+      logger.info("Regist class of util.List to kryo[108]. ")
+      kryo.register(classOf[util.List[_]], 108)
+
+      var regId: Int = 151
+      if (kryoMoudleClassMap != null && !kryoMoudleClassMap.isEmpty()) {
+        kryoMoudleClassMap.foreach(x => {
+          x._2.foreach(i => {
+            logger.info(s"Regist class of ${i.getName()} to kryo[$regId]. ")
+            kryo.register(i, regId)
+            regId = regId + 1
+          })
+        })
+      }
+
       kryo
     }
   }
@@ -39,7 +85,7 @@ object KryoUtil {
     *
     * @return 当前线程的 Kryo 实例
     */
-  def getInstance(): Kryo = kryoLocal.get
+  def getInstance(): Kryo = kryoLocal.get()
 
 
   //-----------------------------------------------
@@ -50,14 +96,15 @@ object KryoUtil {
 
   /**
     * 将对象【及类型】序列化为字节数组
+    *
     * @param obj 任意对象
     * @tparam T 对象的类型
-    * @return  序列化后的字节数组
+    * @return 序列化后的字节数组
     */
   def writeClassAndObjectToByteArray[T](obj: T): Array[Byte] = {
     var byteArrayOutputStream: ByteArrayOutputStream = null
     var output: Output = null
-    try{
+    try {
       byteArrayOutputStream = new ByteArrayOutputStream()
       output = new Output(byteArrayOutputStream)
       val kryo = getInstance
@@ -65,11 +112,11 @@ object KryoUtil {
       output.flush()
       byteArrayOutputStream.toByteArray()
     } finally {
-      if(byteArrayOutputStream != null){
+      if (byteArrayOutputStream != null) {
         byteArrayOutputStream.close()
       }
 
-      if(output != null){
+      if (output != null) {
         output.close()
       }
     }
@@ -104,7 +151,7 @@ object KryoUtil {
     var input: Input = null
     var result: Object = null
     try {
-      if(byteArray != null){
+      if (byteArray != null) {
         byteArrayInputStream = new ByteArrayInputStream(byteArray)
         input = new Input(byteArrayInputStream)
         val kryo = getInstance()
@@ -112,10 +159,10 @@ object KryoUtil {
       }
       result.asInstanceOf[T]
     } finally {
-      if(byteArrayInputStream != null){
+      if (byteArrayInputStream != null) {
         byteArrayInputStream.close()
       }
-      if(input != null){
+      if (input != null) {
         input.close()
       }
     }
@@ -139,7 +186,6 @@ object KryoUtil {
   }
 
 
-
   //          只序列化/反序列化对象
   //          序列化的结果里，不包含类型的信息
   /**
@@ -159,12 +205,12 @@ object KryoUtil {
       kryo.writeObject(output, obj)
       output.flush()
       byteArrayOutputStream.toByteArray
-    } finally{
-      if(byteArrayOutputStream != null){
+    } finally {
+      if (byteArrayOutputStream != null) {
         byteArrayOutputStream.close()
       }
 
-      if(output != null){
+      if (output != null) {
         output.close()
       }
     }
@@ -205,11 +251,11 @@ object KryoUtil {
       input = new Input(byteArrayInputStream)
       val kryo = getInstance
       kryo.readObject(input, clazz)
-    } finally{
-      if(byteArrayInputStream != null){
+    } finally {
+      if (byteArrayInputStream != null) {
         byteArrayInputStream.close()
       }
-      if(input != null){
+      if (input != null) {
         input.close()
       }
     }
