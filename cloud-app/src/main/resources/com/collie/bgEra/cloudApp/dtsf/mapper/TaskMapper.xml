@@ -139,4 +139,12 @@
     INSERT INTO yjdtest VALUES(#{id},#{name})
   </insert>
 
+  <select id="qryResourceParamsById" parameterType="Map" resultType="Map">
+    SELECT b.paramname id,b.paramvalue val
+    FROM dtf_resource a,dtf_resource_params b
+    WHERE a.name=b.resourcename
+      AND a.targetid=#{targetId}
+      AND a.restype=#{resourceType}
+  </select>
+
 </mapper>

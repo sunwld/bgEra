@@ -128,15 +128,10 @@ class TaskMapper {
   @HsetGetItem(cacheKey = "'bgEra.cloudApp.dtsf.TargetHset'", field = "#targetName")
   def qryTargetInfoByName(targetName: String) = {
     val targetSql = NAMESPACE + ".qryTargetInfoByName"
-    val resourceSql = NAMESPACE + ".qryResourceMapByTarget"
     var session: SqlSession = null
     try {
       session = factory.openSession(false)
       val target: TargetInfo = session.selectOne(targetSql, targetName)
-      val resouceList: util.List[ResourceInfo] = session.selectList(resourceSql, targetName)
-      val resourceMap = mutable.Map[String, ResourceInfo]()
-      resouceList.foreach(resourceInfo => resourceMap.put(resourceInfo.resourceName, resourceInfo))
-      target.setResourceMap(resourceMap)
       target
     } finally {
       if (session != null) {
@@ -311,20 +306,25 @@ class TaskMapper {
     }
   }
 
-  def qryResourcePropByName(name: String) = {
-    val connPros = new Properties()
-
-    connPros.setProperty("druid.driverClassName","com.mysql.jdbc.Driver")
-    connPros.setProperty("druid.username","dtsf")
-    connPros.setProperty("druid.password","1234yjd")
-    connPros.setProperty("druid.url","jdbc:mysql://133.96.6.1:3306/dtsfdb?characterEncoding=utf-8&useSSL=false")
-
-    connPros.setProperty("druid.initialSize","30")
-    connPros.setProperty("druid.minIdle","30")
-    connPros.setProperty("druid.maxActive","100")
-    connPros.setProperty("druid.poolPreparedStatements","false")
-    connPros.setProperty("druid.maxPoolPreparedStatementPerConnectionSize","0")
-    connPros
+  def qryResourceParamsById(targetId: String,resType: String) = {
+    val resSql = NAMESPACE + ".qryResourceParamsById"
+    var session: SqlSession = null
+    val paraMap = new ju.HashMap[String,String]()
+    paraMap.put("targetId",targetId)
+    paraMap.put("resourceType",resType)
+    val resProps = new Properties()
+    try {
+      session = factory.openSession(false)
+      val list: util.List[Map[String,String]] = session.selectList(resSql, paraMap)
+      list.foreach(map => {
+        resProps.setProperty(map("id"),map("val"))
+      })
+      resProps
+    } finally {
+      if (session != null) {
+        session.close()
+      }
+    }
   }
 
 

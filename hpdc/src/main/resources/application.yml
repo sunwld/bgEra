@@ -1,0 +1,13 @@
+spring:
+  profiles:
+    active: common
+  freemarker:
+    cache: false
+    charset: UTF-8
+    content-type: text/html
+    prefix:
+    template-loader-path: classpath:/templates/
+    suffix: .ftl
+    enabled: true
+#    settings:
+#      template_update_delay: 0
