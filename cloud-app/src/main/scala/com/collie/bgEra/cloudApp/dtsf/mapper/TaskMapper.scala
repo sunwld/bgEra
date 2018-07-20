@@ -11,8 +11,6 @@ import org.springframework.beans.factory.annotation.{Autowired, Qualifier}
 import org.springframework.stereotype.Repository
 import java.{util => ju}
 
-import com.collie.bgEra.cloudApp.bpq.{BpqQueueManger, QueueItem, SqlItem}
-import com.collie.bgEra.cloudApp.dtsf.conf.DtsfConf
 import com.collie.bgEra.cloudApp.kryoUtil.KryoUtil
 import org.slf4j.{Logger, LoggerFactory}
 
@@ -198,7 +196,9 @@ class TaskMapper {
   def flushTaskStatusToDB(zkSessionId: String): Unit ={
     val begin = System.currentTimeMillis()
     val targetList: util.List[String] = getTargetShardingBySessionId(zkSessionId)
-
+    if(targetList == null || targetList.isEmpty){
+      return
+    }
     val allTask: util.Map[String, Array[Byte]] = redisService.hsetGetAllNoVlueDeser("bgEra.cloudApp.dtsf.taskMap")
     val allWorkUnit: util.Map[String, Array[Byte]] = redisService.hsetGetAllNoVlueDeser("bgEra.cloudApp.dtsf.workUnitMap")
     val myTaskIds = qryMyTaskIdListByTargets(zkSessionId,targetList)

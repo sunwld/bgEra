@@ -1,28 +1,37 @@
 package com.collie.bgEra.cloudApp.dsla
 
-import com.collie.bgEra.cloudApp.CloudAppContext
+import java.util.Properties
+
 import com.collie.bgEra.cloudApp.base.ZookeeperSession
+import com.collie.bgEra.cloudApp.context.{CloudAppContext, ContextConf}
 import com.collie.bgEra.cloudApp.utils.ContextHolder
 import org.springframework.beans.factory.annotation.{Autowired, Qualifier}
-import org.springframework.context.annotation.{Bean, ComponentScan, Configuration, EnableAspectJAutoProxy}
+import org.springframework.context.annotation._
+import org.springframework.util.Assert
 
 
 @Configuration
 @ComponentScan(basePackages = Array("com.collie.bgEra.cloudApp.dsla"),basePackageClasses = Array(classOf[ContextHolder]))
+@Import(Array(classOf[ContextConf]))
 @EnableAspectJAutoProxy
 class DslaConf {
   @Autowired
-  val context: CloudAppContext = null
+  @Qualifier("cloudAppProps")
+  private val props: Properties = null
 
   @Bean(name = Array("distributedServiceLatchArbitrator"))
   def getDistributedServiceLatchArbitrator: DistributedServiceLatchArbitrator = {
-    DistributedServiceLatchArbitrator(context.projectName).initZookeeperForDSA()
+    val projectName = props.getProperty("projectName")
+    Assert.hasText(projectName,"projectName must not be empty")
+    DistributedServiceLatchArbitrator(projectName).initZookeeperForDSA()
     DistributedServiceLatchArbitrator()
   }
 
   @Bean(name = Array("dslaZkSession"))
   def getZkDriver(): ZookeeperSession = {
-    ZookeeperSession(context.zkUrl)
+    val zkUrl = props.getProperty("dsla.zkUrl")
+    Assert.hasText(zkUrl,"dsla.zkUrl must not be empty")
+    ZookeeperSession(zkUrl)
   }
 
 }

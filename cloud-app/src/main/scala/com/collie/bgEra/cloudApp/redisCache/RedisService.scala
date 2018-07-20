@@ -8,9 +8,10 @@ import org.springframework.stereotype.Component
 import redis.clients.jedis.{JedisCluster, Tuple}
 import java.{util => ju}
 
-import com.collie.bgEra.cloudApp.CloudAppContext
+import com.collie.bgEra.cloudApp.context.CloudAppContext
 import com.collie.bgEra.cloudApp.kryoUtil.KryoUtil
 import com.collie.bgEra.cloudApp.redisCache.bean.ZSetItemBean
+import org.springframework.beans.factory.annotation.{Autowired, Qualifier}
 
 import scala.collection.JavaConversions._
 import scala.collection.mutable
@@ -21,7 +22,9 @@ import scala.collection.mutable
 @Component
 class RedisService {
 
-  private val jedis: JedisCluster = ContextHolder.getBean(classOf[CloudAppContext]).jedisCluster
+  @Autowired
+  @Qualifier("cloudAppJedisCluster")
+  private val jedis: JedisCluster = null
 
   private val strSerializer: StringRedisSerializer = new StringRedisSerializer(Charset.forName("UTF8"))
 
@@ -71,7 +74,7 @@ class RedisService {
     var v:Array[Byte] = null
     value match {
       case a: Array[Byte] => v = a
-      case _ => v = kryoUtil.writeObjectToByteArray(value)
+      case _ => v = kryoUtil.writeClassAndObjectToByteArray(value)
     }
     doSetObject(k,v,expireTime)
   }
@@ -243,12 +246,12 @@ class RedisService {
   }
 
   def hsetPut(key: String, field: String, value: Any) : Long  ={
-    jedis.hset(strSerializer.serialize(key),strSerializer.serialize(field),kryoUtil.writeObjectToByteArray(value))
+    jedis.hset(strSerializer.serialize(key),strSerializer.serialize(field),kryoUtil.writeClassAndObjectToByteArray(value))
   }
 
   def hsetPut(key: String, putMap: ju.Map[String,Any]) : String  ={
     val bytesPutMap: mutable.Map[Array[Byte], Array[Byte]] = putMap.map(i => {
-      (strSerializer.serialize(i._1) , kryoUtil.writeObjectToByteArray(i._2))
+      (strSerializer.serialize(i._1) , kryoUtil.writeClassAndObjectToByteArray(i._2))
     })
     jedis.hmset(strSerializer.serialize(key),bytesPutMap)
   }
@@ -286,13 +289,13 @@ class RedisService {
 
   def listLpush(lKey: String,values: Any*) ={
     val k: Array[Byte] = strSerializer.serialize(lKey)
-    val vs: Seq[Array[Byte]] = values.map(kryoUtil.writeObjectToByteArray(_))
+    val vs: Seq[Array[Byte]] = values.map(kryoUtil.writeClassAndObjectToByteArray(_))
     jedis.lpush(k,vs:_*)
   }
 
   def listRpush(lKey: String,value: Any) ={
     val k: Array[Byte] = strSerializer.serialize(lKey)
-    val v = kryoUtil.writeObjectToByteArray(value)
+    val v = kryoUtil.writeClassAndObjectToByteArray(value)
     jedis.rpush(k,v)
   }
 

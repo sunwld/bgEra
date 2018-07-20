@@ -14,7 +14,7 @@ import scala.collection.mutable
 
 class ZApplicationManager private(
                                    val projectName: String,
-                                   val minLiveServCount: Int, val clusterInitServCount: Int,
+                                   val minLiveServCount: Int,
                                    val appManagerStandardSkill: AppManagerStandardSkill) {
 
 
@@ -60,7 +60,6 @@ class ZApplicationManager private(
   def rebalanceClusterByMaster(): Unit = {
     var voterIdCount = watchVoteNode().size()
     var clusterStatus = getClusterStatus()
-    val clusterInitServCount = this.clusterInitServCount
     val clusterMinServCount = this.minLiveServCount
     logger.info(s"rebalanceClusterByMaster:cluster voters count:${voterIdCount}")
     logger.info(s"rebalanceClusterByMaster:cluster zk current status:${clusterStatus}")
@@ -287,12 +286,12 @@ object ZApplicationManager {
   private var zApplicationManager: ZApplicationManager = _
 
   def apply(projectName: String,
-            minLiveServCount: Int, clusterInitServCount: Int,
+            minLiveServCount: Int,
             appManagerStandardSkill: AppManagerStandardSkill): ZApplicationManager = {
     if (zApplicationManager == null) {
       this.synchronized {
         if (zApplicationManager == null) {
-          zApplicationManager = new ZApplicationManager(projectName, minLiveServCount, clusterInitServCount, appManagerStandardSkill)
+          zApplicationManager = new ZApplicationManager(projectName, minLiveServCount, appManagerStandardSkill)
         }
       }
     }

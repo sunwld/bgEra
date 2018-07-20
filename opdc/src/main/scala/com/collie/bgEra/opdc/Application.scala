@@ -1,17 +1,24 @@
 package com.collie.bgEra.opdc
 
+import java.util.Properties
+
 import com.collie.bgEra.cloudApp.utils.ContextHolder
-import com.collie.bgEra.opdcConf.{ConfToDtsf, ConfToTest}
+import com.collie.bgEra.opdcConf.ConfToDtsf
+
 import org.springframework.boot.SpringApplication
-import org.springframework.boot.autoconfigure.SpringBootApplication
+import org.springframework.boot.autoconfigure.{EnableAutoConfiguration, SpringBootApplication}
+import org.springframework.boot.autoconfigure.jdbc.{DataSourceAutoConfiguration, DataSourceBuilder, DataSourceTransactionManagerAutoConfiguration}
+import org.springframework.boot.autoconfigure.orm.jpa.HibernateJpaAutoConfiguration
+import org.springframework.boot.context.properties.ConfigurationProperties
 import org.springframework.web.servlet.config.annotation._
 import org.springframework.context.annotation._
 
 //@EnableEurekaClient
 //@EnableDiscoveryClient
-//@Import(Array(classOf[ConfToTest]))
+@EnableAutoConfiguration(exclude=Array(classOf[HibernateJpaAutoConfiguration],classOf[DataSourceTransactionManagerAutoConfiguration],classOf[DataSourceAutoConfiguration]))
 @Import(Array(classOf[ConfToDtsf]))
-@SpringBootApplication(scanBasePackages = Array("com.collie.bgEra.opdc"),scanBasePackageClasses = Array(classOf[ContextHolder]))
+@SpringBootApplication(scanBasePackages = Array("com.collie.bgEra.opdc"),
+    scanBasePackageClasses = Array(classOf[ContextHolder]))
 class Config extends WebMvcConfigurationSupport{
 //    @Bean(name = Array("dataSource"))
 //    @ConfigurationProperties(prefix = "spring.datasource.druid")

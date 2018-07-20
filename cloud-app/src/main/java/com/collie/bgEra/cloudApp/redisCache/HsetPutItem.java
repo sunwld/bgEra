@@ -15,5 +15,4 @@ public @interface HsetPutItem {
   String field();
 
   String hsetItemEl();
-
 }

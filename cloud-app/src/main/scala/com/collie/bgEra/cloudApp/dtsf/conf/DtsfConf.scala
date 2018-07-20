@@ -1,17 +1,17 @@
 package com.collie.bgEra.cloudApp.dtsf.conf
 
 import java.util
+import java.util.Properties
 import java.util.concurrent.{Executor, Executors}
 
 import com.alibaba.druid.pool.DruidDataSource
-import com.collie.bgEra.cloudApp.CloudAppContext
 import com.collie.bgEra.cloudApp.appm.conf.AppmConf
-import com.collie.bgEra.cloudApp.bpq.{BpqConf, BpqQueueManger, BpqSqlQueueBus}
+import com.collie.bgEra.cloudApp.context.{CloudAppContext, ContextConf}
 import com.collie.bgEra.cloudApp.dtsf.DistributedTaskBus
 import com.collie.bgEra.cloudApp.dtsf.bean.{TargetInfo, TaskInfo, WorkUnitInfo, ZkSessionInfo}
+import com.collie.bgEra.cloudApp.dtsf.impl.ResourceManagerImpl
 import com.collie.bgEra.cloudApp.kryoUtil.KryoUtil
 import com.collie.bgEra.cloudApp.redisCache.conf.RedisCacheConf
-import com.collie.bgEra.cloudApp.utils.ContextHolder
 import com.collie.bgEra.commons.util.CommonUtils
 import org.mybatis.spring.SqlSessionFactoryBean
 import org.quartz._
@@ -22,6 +22,9 @@ import org.springframework.core.io.support.PathMatchingResourcePatternResolver
 import org.springframework.scheduling.annotation.{EnableScheduling, SchedulingConfigurer}
 import org.springframework.scheduling.config.ScheduledTaskRegistrar
 import org.springframework.scheduling.quartz.{CronTriggerFactoryBean, MethodInvokingJobDetailFactoryBean, SchedulerFactoryBean}
+
+import scala.collection.JavaConversions._
+import scala.collection.mutable
 
 /**
   * Dtsf组件实现分布式任务调度，
@@ -43,10 +46,18 @@ import org.springframework.scheduling.quartz.{CronTriggerFactoryBean, MethodInvo
   */
 @Configuration
 @EnableScheduling
-@Import(Array(classOf[AppmConf], classOf[RedisCacheConf], classOf[BpqConf]))
+@Import(Array(classOf[ContextConf],classOf[AppmConf], classOf[RedisCacheConf]))
 @ComponentScan(Array("com.collie.bgEra.cloudApp.dtsf", "com.collie.bgEra.cloudApp.utils"))
 class DtsfConf extends SchedulingConfigurer{
   private val logger: Logger = LoggerFactory.getLogger("dtsf")
+
+  @Autowired
+  @Qualifier("cloudAppProps")
+  private val props: Properties = null
+  @Autowired
+  private val cloudAppContext:CloudAppContext = null
+  @Autowired
+  private val resourceManager: ResourceManagerImpl = null
 
   init()
 
@@ -61,13 +72,36 @@ class DtsfConf extends SchedulingConfigurer{
   }
 
   @Bean(Array("bgEra_dtsf_SqlSessionFactory"))
-  def sqlSeesionFatory(@Qualifier("dtfsDataSource") dtfsDataSource: DruidDataSource): SqlSessionFactoryBean = {
+  def sqlSeesionFatory(): SqlSessionFactoryBean = {
+    val druidPros = new Properties()
+    cloudAppContext.getDefaultDruidProp().foreach(p => {
+      druidPros.setProperty(p._1,p._2)
+    })
+
+    props.foreach(p => {
+      if (p._1.startsWith("dtsf.mainDataSource.druid")) {
+        druidPros.setProperty(p._1.substring(p._1.indexOf("druid")),p._2)
+      }
+    })
+
+    val dataSource = new DruidDataSource()
+    dataSource.setDefaultAutoCommit(false)
+    dataSource.setMaxWait(30000)
+    dataSource.setValidationQueryTimeout(3)
+    dataSource.setRemoveAbandoned(true)
+    dataSource.setRemoveAbandonedTimeout(180)
+    dataSource.setLogAbandoned(true)
+    val slf4jLogFilter = new com.alibaba.druid.filter.logging.Slf4jLogFilter()
+    slf4jLogFilter.setStatementExecutableSqlLogEnable(false)
+    dataSource.setProxyFilters(java.util.Arrays.asList(slf4jLogFilter))
+    dataSource.configFromPropety(druidPros)
+
     val sqlSessionFactoryBean = new SqlSessionFactoryBean()
-    sqlSessionFactoryBean.setDataSource(dtfsDataSource)
+    sqlSessionFactoryBean.setDataSource(dataSource)
     val resolver = new PathMatchingResourcePatternResolver()
     val resources = resolver.getResources("classpath*:com/collie/bgEra/cloudApp/dtsf/mapper/*Mapper.xml")
     sqlSessionFactoryBean.setMapperLocations(resources)
-    ContextHolder.getBean(classOf[CloudAppContext]).putSqlSessionFactory("dtsfMain", sqlSessionFactoryBean.getObject())
+    resourceManager.putSqlSessionFactoy("dtsfMain", sqlSessionFactoryBean.getObject())
     sqlSessionFactoryBean
   }
 
@@ -98,7 +132,7 @@ class DtsfConf extends SchedulingConfigurer{
     scheduler.setTriggers(mainTrigger.getObject())
     scheduler.setAutoStartup(false)
     scheduler.setStartupDelay(5)
-    val mainScheduler = CommonUtils.readPropertiesFile("schedulerProp/mainScheduler.properties")
+    val mainScheduler = CommonUtils.readPropertiesFile("cloudAppProps/schedulerProp/mainScheduler.properties")
     scheduler.setQuartzProperties(mainScheduler)
     scheduler
   }

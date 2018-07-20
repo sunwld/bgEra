@@ -9,5 +9,6 @@ class TargetInfo {
   @BeanProperty var shardingValue: Int = _
   @BeanProperty var resourceMap: mutable.Map[String, ResourceInfo] = _
 
-  override def toString = s"TargetInfo($name, $description, $shardingValue)"
+
+  override def toString = s"TargetInfo(name=$name, description=$description, shardingValue=$shardingValue, resourceMap=$resourceMap)"
 }

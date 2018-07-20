@@ -33,7 +33,11 @@ class ZookeeperSession private(val zkUrl: String, val sessionTimeout: Int) {
   }
 
   def isConnected(): Boolean = {
-    zk.getState.isConnected
+    if(zk == null || zk.getState() == null){
+      false
+    }
+    else{zk.getState().isConnected()}
+
   }
 
   def exists(path: String, retryTimes: Int = MAX_RETRY_TIMES): Stat = {

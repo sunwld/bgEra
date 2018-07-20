@@ -4,7 +4,8 @@ import java.io.IOException
 import java.util
 import java.util.Date
 
-import com.collie.bgEra.cloudApp.CloudAppContext
+import com.collie.bgEra.cloudApp.appm.ZApplicationManager
+import com.collie.bgEra.cloudApp.context.CloudAppContext
 import com.collie.bgEra.cloudApp.dtsf.bean.TaskInfo
 import com.collie.bgEra.cloudApp.dtsf.mapper.TaskMapper
 import com.collie.bgEra.cloudApp.dtsf.{DistributedTaskBus, TaskManager}
@@ -14,7 +15,7 @@ import org.quartz.impl.StdSchedulerFactory
 import org.quartz._
 import org.quartz.impl.triggers.SimpleTriggerImpl
 import org.slf4j.{Logger, LoggerFactory}
-import org.springframework.beans.factory.annotation.Autowired
+import org.springframework.beans.factory.annotation.{Autowired, Qualifier}
 import org.springframework.scheduling.annotation.EnableScheduling
 import org.springframework.stereotype.Component
 import org.xml.sax.SAXException
@@ -35,8 +36,12 @@ class DistributedTaskBusImpl extends DistributedTaskBus {
     @Autowired
     private val taskMapper:TaskMapper = null
 
+    @Autowired
+    @Qualifier("zApplicationManager")
+    private val zkAppManager: ZApplicationManager = null
+
     override def runBus(): Unit = {
-        val taskList: util.List[ZSetItemBean] = taskManager.getPreparedTaskList(context.appmClusterInfo.currentVotid)
+        val taskList: util.List[ZSetItemBean] = taskManager.getPreparedTaskList(zkAppManager.clusterInfo.currentVotid)
         if(taskList == null || taskList.size() == 0){
           return
         }

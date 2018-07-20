@@ -31,5 +31,5 @@ class WorkUnitInfo {
   @BeanProperty var errors: Long = _
 
 
-  override def toString = s"WorkUnitInfo(taskName=$taskName, workUnitName=$workUnitName, targetId=$targetId, runOrder=$runOrder, springBeanName=$springBeanName, thisTime=$thisTime, status=$status, errors=$errors)"
+  override def toString = s"WorkUnitInfo(workUnitId=$workUnitId, taskName=$taskName, workUnitName=$workUnitName, targetId=$targetId, runOrder=$runOrder, springBeanName=$springBeanName, thisTime=$thisTime, status=$status, errors=$errors)"
 }

@@ -1,13 +1,16 @@
 package com.collie.bgEra.cloudApp.appm.conf
 
-import com.collie.bgEra.cloudApp.CloudAppContext
+import java.util.Properties
+
 import com.collie.bgEra.cloudApp.appm.{AppManagerStandardSkill, ZApplicationManager}
 import com.collie.bgEra.cloudApp.base.{BaseConf, ZookeeperSession}
+import com.collie.bgEra.cloudApp.context.CloudAppContext
 import com.collie.bgEra.cloudApp.dsla.DistributedServiceLatchArbitrator
 import com.collie.bgEra.cloudApp.redisCache.conf.RedisCacheConf
 import com.collie.bgEra.cloudApp.utils.ContextHolder
 import org.springframework.beans.factory.annotation.{Autowired, Qualifier, Value}
 import org.springframework.context.annotation.{Bean, ComponentScan, Configuration, Import}
+import org.springframework.util.Assert
 
 /**
   * APPM:cloud application manager
@@ -28,17 +31,21 @@ class AppmConf {
   val appManagerStandardSkill: AppManagerStandardSkill = null
 
   @Autowired
-  val context: CloudAppContext = null
+  @Qualifier("cloudAppProps")
+  private val props: Properties = null
 
   @Bean(name = Array("zApplicationManager"))
   def getZApplicationManager(): ZApplicationManager = {
-    ZApplicationManager(context.projectName, context.minLiveServCount,
-      context.clusterInitServCount, appManagerStandardSkill).implementZManagement()
+    val projectName = props.getProperty("projectName")
+    Assert.hasText(projectName,"projectName must not be empty")
+    ZApplicationManager(projectName ,props.getProperty("appm.minLiveServCount").toInt, appManagerStandardSkill).implementZManagement()
     ZApplicationManager()
   }
 
   @Bean(name = Array("appmZkSession"))
   def getZkDriver(): ZookeeperSession = {
-    ZookeeperSession(context.zkUrl)
+    val zkUrl = props.getProperty("appm.zkUrl")
+    Assert.hasText(zkUrl,"appm.zkUrl must not be empty")
+    ZookeeperSession(zkUrl)
   }
 }

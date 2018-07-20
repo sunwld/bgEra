@@ -2,7 +2,6 @@ package com.collie.bgEra.cloudApp.dtsf.impl
 
 import java.util.Properties
 
-import com.collie.bgEra.cloudApp.CloudAppContext
 import com.collie.bgEra.cloudApp.dtsf.{ResourceManager, TaskManager}
 import com.collie.bgEra.cloudApp.dtsf.bean.{HostSshConnPoolResource, JmxConnPoolResource}
 import org.springframework.stereotype.Component
@@ -12,6 +11,7 @@ import scala.collection.JavaConversions._
 import java.{util => ju}
 
 import com.alibaba.druid.pool.DruidDataSource
+import com.collie.bgEra.cloudApp.context.CloudAppContext
 import com.collie.bgEra.cloudApp.dtsf.mapper.TaskMapper
 import com.collie.bgEra.cloudApp.utils.ContextHolder
 import org.apache.ibatis.session.SqlSessionFactory
@@ -22,19 +22,28 @@ import org.springframework.context.annotation.Lazy
 @Component
 class ResourceManagerImpl extends ResourceManager{
 
-  private var cloudAppContext: CloudAppContext =  null
-
   @Autowired
+  @Lazy
   private val taskMapper: TaskMapper = null
 
-  init()
-  private def init() ={
-    cloudAppContext = ContextHolder.getBean(classOf[CloudAppContext])
-    cloudAppContext.setResourceManager(this)
-  }
+  @Autowired
+  private val cloudAppContext: CloudAppContext = null
+
+  private val dbSqlSessionFactoyMap: java.util.Map[String,SqlSessionFactory] = new java.util.HashMap()
+  private var defaultDruidProp: Properties = null
 
   override def getDataSourceResource(resourceName: String): SqlSessionFactory = {
-    cloudAppContext.getSqlSessionFactory(resourceName)
+    var factory = dbSqlSessionFactoyMap.get(resourceName)
+    if(factory == null){
+      dbSqlSessionFactoyMap.synchronized{
+        factory = dbSqlSessionFactoyMap.get(resourceName)
+        if(factory == null){
+          factory = initDataSourceResource(resourceName,cloudAppContext.getDefaultDruidProp())
+          dbSqlSessionFactoyMap.put(resourceName,factory)
+        }
+      }
+    }
+    factory
   }
 
   override def initDataSourceResource(resourceName: String,defaultProp: Properties): SqlSessionFactory = {
@@ -57,6 +66,10 @@ class ResourceManagerImpl extends ResourceManager{
 
     sqlSessionFactoryBean.setDataSource(dataSource)
     sqlSessionFactoryBean.getObject()
+  }
+
+  def putSqlSessionFactoy(name: String,factory: SqlSessionFactory) = {
+    dbSqlSessionFactoyMap.put(name,factory)
   }
 
   override def getHostSshConnPoolResource(resourceName: String): HostSshConnPoolResource = ???

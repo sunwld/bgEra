@@ -8,15 +8,13 @@ import org.springframework.beans.factory.annotation.{Autowired, Qualifier}
 import org.springframework.stereotype.Component
 import java.{util => ju}
 
-import com.collie.bgEra.cloudApp.CloudAppContext
-import com.collie.bgEra.cloudApp.redisCache.HsetDelItem
+import com.collie.bgEra.cloudApp.appm.ZApplicationManager
 import com.collie.bgEra.cloudApp.utils.ContextHolder
-import com.collie.bgEra.commons.util.DateUtils
-import org.apache.ibatis.session.{SqlSession, SqlSessionFactory}
+import org.apache.ibatis.session.{SqlSessionFactory}
 import org.slf4j.{Logger, LoggerFactory}
 
 import scala.collection.JavaConversions._
-import scala.collection.mutable
+
 
 
 @Component
@@ -31,7 +29,9 @@ class TaskManagerImpl extends TaskManager {
   val taskMapper: TaskMapper = null
 
   @Autowired
-  val context: CloudAppContext = null
+  @Qualifier("zApplicationManager")
+  private val zkAppManager: ZApplicationManager = null
+
 
   override def getPreparedTaskList(zkSessionId: String): ju.List[ZSetItemBean] = {
     var preparedTask: ju.List[ZSetItemBean] = null
@@ -125,7 +125,7 @@ class TaskManagerImpl extends TaskManager {
           //task执行出现异常时，记录异常信息
           logger.error("task failed and log error, query dtf_errorlog for detail!", e)
           taskMapper.saveDtfErrorLog(TaskErrorBean(new ju.Date(), taskInfo.taskName, taskInfo.targetId,
-            null, context.appmClusterInfo.currentVotid, e.getMessage))
+            null, zkAppManager.clusterInfo.currentVotid, e.getMessage))
         } catch {
           //如果记录异常信息出现异常，则直接打印异常信息
           case e2: Exception => logger.error("task failed and log error failed too!", e2)
@@ -148,7 +148,7 @@ class TaskManagerImpl extends TaskManager {
           try {
             //task执行出现异常时，记录异常信息
             taskMapper.saveDtfErrorLog(TaskErrorBean(new ju.Date(), taskInfo.taskName, taskInfo.targetId,
-              null, context.appmClusterInfo.currentVotid, e.getMessage))
+              null, zkAppManager.clusterInfo.currentVotid, e.getMessage))
             logger.error("task failed and log error, query dtf_errorlog for detail!", e)
           } catch {
             //如果记录异常信息出现异常，则直接打印异常信息
@@ -157,7 +157,7 @@ class TaskManagerImpl extends TaskManager {
         }
       } finally {
         //将task重新放入到缓存中
-        taskMapper.giveBackTaskZsetList(context.appmClusterInfo.currentVotid,
+        taskMapper.giveBackTaskZsetList(zkAppManager.clusterInfo.currentVotid,
           ju.Arrays.asList(ZSetItemBean(taskInfo.taskId, taskInfo.nextTime.getTime())))
 
         val taskRunLong: Long = System.currentTimeMillis() - taskBeginTimeStamp
