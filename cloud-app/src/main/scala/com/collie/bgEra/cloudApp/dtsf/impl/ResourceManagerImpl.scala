@@ -17,8 +17,7 @@ import org.apache.ibatis.session.SqlSessionFactory
 import org.mybatis.spring.SqlSessionFactoryBean
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.context.annotation.Lazy
-import com.collie.bgEra.cloudApp.ssh2Pool.SshConnFactory
-import com.collie.bgEra.cloudApp.ssh2Pool.SshSession
+import com.collie.bgEra.cloudApp.ssh2Pool.{Ssh2Session, Ssh2SessionPool, SshConnFactory}
 import org.apache.commons.pool2.impl.GenericObjectPool
 import org.apache.commons.pool2.impl.GenericObjectPoolConfig
 
@@ -75,8 +74,8 @@ class ResourceManagerImpl extends ResourceManager{
   }
 
 
-  private val ssh2ConnPoolsMap: java.util.Map[String,GenericObjectPool[SshSession]] = new ju.HashMap()
-  override def getHostSshConnPoolResource(targetId: String): GenericObjectPool[SshSession] = {
+  private val ssh2ConnPoolsMap: java.util.Map[String,Ssh2SessionPool] = new ju.HashMap()
+  override def getHostSshConnPoolResource(targetId: String): Ssh2Session = {
     var pool = ssh2ConnPoolsMap.get(targetId)
     if(pool == null){
 
@@ -88,10 +87,10 @@ class ResourceManagerImpl extends ResourceManager{
         }
       }
     }
-    pool
+    pool.borrowObject()
   }
 
-  override def initHostSshConnPoolResource(targetId: String): GenericObjectPool[SshSession] = {
+  override def initHostSshConnPoolResource(targetId: String): Ssh2SessionPool = {
     val poolConfig = new GenericObjectPoolConfig()
     poolConfig.setTestWhileIdle(true) //空闲时进行连接测试，会启动异步evict线程进行失效检测
     poolConfig.setMinEvictableIdleTimeMillis(1800000) //连接的空闲的最长时间，需要testWhileIdle为true
@@ -108,7 +107,7 @@ class ResourceManagerImpl extends ResourceManager{
 
     val prop = taskMapper.qryResourceParamsById(targetId,ResourceType.HOSTSSHTPOOL)
     val factory = new SshConnFactory(prop.getProperty("hostIp"), prop.getProperty("hostPort").toInt, prop.getProperty("userName"), prop.getProperty("password"))
-    val pool: GenericObjectPool[SshSession] = new GenericObjectPool[SshSession](factory, poolConfig)
+    val pool: Ssh2SessionPool = new Ssh2SessionPool(factory, poolConfig)
     pool
   }
 

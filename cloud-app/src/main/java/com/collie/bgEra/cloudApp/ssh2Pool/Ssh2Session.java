@@ -1,30 +1,52 @@
 package com.collie.bgEra.cloudApp.ssh2Pool;
 
-import java.io.BufferedReader;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.InputStreamReader;
+import java.io.*;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.apache.log4j.Logger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import ch.ethz.ssh2.Connection;
 import ch.ethz.ssh2.Session;
 import ch.ethz.ssh2.StreamGobbler;
 
-public class SshSession {
-	private Logger logger = Logger.getLogger("default");
+public class Ssh2Session {
+	private Logger logger = LoggerFactory.getLogger("ssh2Pool");
 	private Connection connection;
 	private Session session;
+	private Ssh2SessionPool pool;
 
-	public SshSession(Connection connection, Session session) {
-		this.connection = connection;
-		this.session = session;
+	public Ssh2Session(String hostname, int port, String username, String password) throws ConnectRemoteHostException {
+		try {
+			/* 创建connection实例 */
+			Connection connection = new Connection(hostname,port);
+			/* 连接 */
+			connection.connect();
+			/* 验证.
+			 * 如果抛出IOException异常，并且显示类似如下信息
+			 * "Authentication method password not supported by the server at this stage."
+			 * 请查看FAQ文件.
+			 */
+			boolean isAuthenticated = connection.authenticateWithPassword(username, password);
+
+			if (isAuthenticated == false){
+				throw new IOException("用户名密码认证失败：" + hostname);
+			}
+			this.connection = connection;
+		} catch (IOException e) {
+			String message = String.format("Get Ssh2Session failed, hostname=%s,port=%s,username=%s,password=%s", hostname,port,username,"******");
+			logger.error(message, e);
+			throw new ConnectRemoteHostException("连接远程服务器失败：" + hostname, e);
+		}
+	}
+	public Ssh2Session(String hostname, String username, String password) throws ConnectRemoteHostException {
+		this(hostname,22,username,password);
 	}
 
-	public SshSession(Connection connection) {
-		this.connection = connection;
+
+	public void setPool(Ssh2SessionPool pool) {
+		this.pool = pool;
 	}
 
 	public Connection getConnection() {
@@ -35,14 +57,39 @@ public class SshSession {
 		return session;
 	}
 
-	public void closeSession() {
-		SshConnUtil.release(session);
-		session = null;
+	private void openSession() throws IOException {
+		if(session == null){
+			this.session = connection.openSession();
+		}
 	}
 
-	public void openSession() throws IOException {
-		if(session == null){
-			this.session = SshConnUtil.openSession(connection);
+	public void close(){
+		if(pool == null){
+			logger.debug("destory a ssh2 connection:" + this);
+			destory();
+		}else {
+			logger.debug("release a ssh2 connection back to pool:" + this);
+			pool.returnObject(this);
+			this.pool = null;
+		}
+	}
+
+	public void destory(){
+		destorySession();
+		destoryConnection();
+		this.pool = null;
+	}
+
+	private void destorySession(){
+		if(session != null){
+			session.close();
+			session = null;
+		}
+	}
+	private void destoryConnection(){
+		if(connection != null){
+			connection.close();
+			connection = null;
 		}
 	}
 
@@ -65,9 +112,8 @@ public class SshSession {
 			flag = false;
 			logger.error("ssh connection Authentication Failed, command is:" + command, e);
 		}finally {
-			closeSession();
+			destorySession();
 		}
-
 		return flag;
 	}
 
@@ -78,10 +124,8 @@ public class SshSession {
 	 * @throws IOException
 	 */
 	public SshResult execCommand(String command){
-
 		//用来存放结果
 		SshResult result = new SshResult();
-
 		//用于存放执行命令或脚本产生的stdout数据和stderr数据
 		BufferedReader stdoutReader = null;
 		BufferedReader stderrReader = null;
@@ -123,26 +167,37 @@ public class SshSession {
 			}
 
 			result.setStderr(resList);
-
 			result.setExitCode(session.getExitStatus());
-
 		} catch (Exception e) {
 			result.setExitCode(1);
 			logger.error("execu command Exception:" + command, e);
 		}finally {
-			SshConnUtil.release(stdoutReader,stderrReader);
-			closeSession();
+			release(stdoutReader,stderrReader);
+			destorySession();
 		}
-
 		return result;
+	}
 
+	/**
+	 * 关闭若干个Reader对象
+	 * @param args
+	 */
+	public void release(Reader... args){
+		if(args != null && args.length > 0){
+			for(Reader reader : args){
+				if(reader != null){
+					try {
+						reader.close();
+					} catch (IOException e) {
+						logger.error("ssh2Session release" + reader + "failed",e);
+					}
+				}
+			}
+		}
 	}
 
 	@Override
 	public String toString() {
 		return String.format("ip : %s, port : %d", connection.getHostname(),connection.getPort());
 	}
-
-
-
 }
