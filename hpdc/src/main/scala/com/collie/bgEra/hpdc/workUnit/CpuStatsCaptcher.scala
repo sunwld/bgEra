@@ -13,7 +13,7 @@ import org.springframework.stereotype.Component
 class CpuStatsCaptcher extends WorkUnitRunable{
   @Autowired
   @Qualifier("hostShellMap")
-  private val shellMap: java.util.HashMap[String,String] = null
+  private val shellMap: java.util.Map[String,String] = null
 
   @Autowired
   private val resManager: ResourceManager = null
@@ -30,9 +30,9 @@ class CpuStatsCaptcher extends WorkUnitRunable{
       session = sshSessionPool.borrowObject()
       sshResult = session.execCommand(cmd)
       if(sshResult.getExitCode() == null || sshResult.getExitCode() == 0) keys.foreach(k => {
-//        val tmpStr: Array[String] = result.get(i).split("=")
-//        if (tmpStr.length > 1) cfgBean.put(keys(i), tmpStr(1))
-//        else cfgBean.put(keys(i), "")
+
+
+
       })
     } finally{
       if(session != null){

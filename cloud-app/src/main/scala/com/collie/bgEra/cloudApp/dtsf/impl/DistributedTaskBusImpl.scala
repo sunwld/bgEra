@@ -20,6 +20,7 @@ import org.springframework.scheduling.annotation.EnableScheduling
 import org.springframework.stereotype.Component
 import org.xml.sax.SAXException
 import org.quartz.Scheduler
+import org.springframework.context.annotation.Lazy
 
 import scala.collection.JavaConversions._
 
@@ -38,6 +39,7 @@ class DistributedTaskBusImpl extends DistributedTaskBus {
 
     @Autowired
     @Qualifier("zApplicationManager")
+    @Lazy
     private val zkAppManager: ZApplicationManager = null
 
     override def runBus(): Unit = {
