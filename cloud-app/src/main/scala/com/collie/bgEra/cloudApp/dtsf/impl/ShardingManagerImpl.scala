@@ -59,4 +59,7 @@ class ShardingManagerImpl extends ShardingManager{
   override def flushCache(): Unit = {
     taskMapper.flushDtsfRedisCache()
   }
+
+  override def initRedisCache(clusterInfo: ClusterInfo): Unit = {
+  }
 }

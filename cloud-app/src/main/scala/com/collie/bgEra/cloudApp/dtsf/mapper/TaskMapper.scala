@@ -11,6 +11,7 @@ import org.springframework.beans.factory.annotation.{Autowired, Qualifier}
 import org.springframework.stereotype.Repository
 import java.{util => ju}
 
+import com.collie.bgEra.cloudApp.appm.ClusterInfo
 import com.collie.bgEra.cloudApp.kryoUtil.KryoUtil
 import org.slf4j.{Logger, LoggerFactory}
 
@@ -44,7 +45,6 @@ class TaskMapper {
       session.commit()
     } catch {
       case e: Exception => {
-        session.rollback()
         throw e
       }
     } finally {
@@ -66,7 +66,6 @@ class TaskMapper {
       session.commit()
     } catch {
       case e: Exception => {
-        session.rollback()
         throw e
       }
     } finally {
@@ -114,8 +113,12 @@ class TaskMapper {
     try {
       session = factory.openSession(false)
       val list: util.List[TaskInfo] = session.selectList(sql, targetList)
+      var score:Double = 0
       for (task <- list) {
-        result.add(ZSetItemBean(task.taskId, task.getNextTime().getTime()))
+        if(task.getNextTime() != null){
+          score = task.getNextTime().getTime()
+        }
+        result.add(ZSetItemBean(task.taskId, score))
       }
       result
     } finally {
@@ -306,6 +309,7 @@ class TaskMapper {
     }
   }
 
+
   def qryResourceParamsById(targetId: String,resType: String) = {
     val resSql = NAMESPACE + ".qryResourceParamsById"
     var session: SqlSession = null
@@ -315,9 +319,9 @@ class TaskMapper {
     val resProps = new Properties()
     try {
       session = factory.openSession(false)
-      val list: util.List[Map[String,String]] = session.selectList(resSql, paraMap)
+      val list: util.List[util.Map[String,String]] = session.selectList(resSql, paraMap)
       list.foreach(map => {
-        resProps.setProperty(map("id"),map("val"))
+        resProps.setProperty(map.get("id"),map.get("val"))
       })
       resProps
     } finally {

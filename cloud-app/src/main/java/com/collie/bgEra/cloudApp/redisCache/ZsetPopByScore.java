@@ -12,7 +12,7 @@ import java.lang.annotation.*;
 public @interface ZsetPopByScore {
   String cacheKey();
 
-  double minScore() default Double.MIN_VALUE;
+  double minScore() default 0-Double.MAX_VALUE;
 
   double maxScore() default Double.MAX_VALUE;
 

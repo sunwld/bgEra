@@ -9,6 +9,8 @@ trait ShardingManager {
 
   def flushCache(): Unit
 
+  def initRedisCache(clusterInfo: ClusterInfo): Unit
+
   def generateCurrentInstanceId: Long
 
   def queryShardingInfoByInstaceId(instId: Long): Unit

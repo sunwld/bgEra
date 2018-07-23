@@ -32,6 +32,22 @@ object KryoUtil {
     }
   }
 
+  private val kryoCustomClassRegMap: util.Map[Integer, Class[_]] = new util.HashMap()
+
+
+  def addCustomClassRegMap(customClassMap: util.Map[Integer, Class[_]]): Unit = {
+    kryoCustomClassRegMap.synchronized{
+      if(customClassMap != null){
+        customClassMap.foreach(x => {
+          if (kryoCustomClassRegMap.containsKey(x._1)){
+            logger.warn(s"class register id [${x._1}] is allready exists, registed class[${kryoCustomClassRegMap.get(x._1)}], new class[${x._2}].")
+          }
+          kryoCustomClassRegMap.put(x._1,x._2)
+        })
+      }
+    }
+  }
+
   private val kryoLocal = new ThreadLocal[Kryo]() {
     override protected def initialValue: Kryo = {
       val kryo = new Kryo()
@@ -110,6 +126,14 @@ object KryoUtil {
           })
         })
       }
+
+      /**
+        * 自定义注册，id 必须是10000以后的
+        */
+      kryoCustomClassRegMap.foreach(x => {
+        logger.info(s"Regist class of ${x._2.getName()} to kryo[${x._1}]. ")
+        kryo.register(x._2,x._1)
+      })
 
       kryo
     }

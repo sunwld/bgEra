@@ -4,7 +4,6 @@ import java.util.Properties
 
 import com.collie.bgEra.cloudApp.dtsf.bean.JmxConnPoolResource
 import com.collie.bgEra.cloudApp.ssh2Pool.{Ssh2Session, Ssh2SessionPool}
-import org.apache.commons.pool2.impl.GenericObjectPool
 import org.apache.ibatis.session.SqlSessionFactory
 
 trait ResourceManager {

@@ -31,13 +31,13 @@ public class Ssh2Session {
 			boolean isAuthenticated = connection.authenticateWithPassword(username, password);
 
 			if (isAuthenticated == false){
-				throw new IOException("用户名密码认证失败：" + hostname);
+				throw new IOException("username or password authentication failed：" + hostname);
 			}
 			this.connection = connection;
 		} catch (IOException e) {
 			String message = String.format("Get Ssh2Session failed, hostname=%s,port=%s,username=%s,password=%s", hostname,port,username,"******");
 			logger.error(message, e);
-			throw new ConnectRemoteHostException("连接远程服务器失败：" + hostname, e);
+			throw new ConnectRemoteHostException("Failed to connect to remote host：" + hostname, e);
 		}
 	}
 	public Ssh2Session(String hostname, String username, String password) throws ConnectRemoteHostException {

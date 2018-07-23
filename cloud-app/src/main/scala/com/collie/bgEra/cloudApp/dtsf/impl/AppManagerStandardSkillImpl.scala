@@ -37,12 +37,14 @@ class AppManagerStandardSkillImpl extends AppManagerStandardSkill {
 
   override def reconstruction(clusterInfo: ClusterInfo): Unit = {
     println(s"reconstruction $clusterInfo")
+    shardingManager.initRedisCache(clusterInfo)
   }
 
   override def reallocation(clusterInfo: ClusterInfo): Unit = {
     logger.info(s"reallocation $clusterInfo")
     shardingManager.flushCache()
     shardingManager.saveZksessionInfo(clusterInfo)
+
     shardingManager.reshardTargets(clusterInfo.clusterVotids)
   }
 }
