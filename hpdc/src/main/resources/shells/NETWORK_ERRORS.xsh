@@ -1,18 +1,18 @@
 case `/bin/uname` in
 SunOS)
   echo "OSTYPE:SOLARIS"
-  netstat -in
+  netstat -s
        ;;
 AIX)
   echo "OSTYPE:AIX"
-  netstat -in
+  netstat -s
        ;;
 Linux)
   echo "OSTYPE:LINUX"
-  netstat -in
+  netstat -s
        ;;
 HP-UX)
   echo "OSTYPE:HPUX"
-  netstat -in
+  netstat -s
        ;;
 esac

@@ -18,6 +18,7 @@ import scala.util.control.Breaks.{break, breakable}
 @Component("memStatsCaptcher")
 class MemStatsCaptcher extends WorkUnitRunable{
   private val TOPIC = "hpdc-memsum"
+  private val SHELL = "MEM"
   private val logger: Logger = LoggerFactory.getLogger("hpdc")
 
   @Autowired

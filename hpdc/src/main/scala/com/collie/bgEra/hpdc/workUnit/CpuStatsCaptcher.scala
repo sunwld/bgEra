@@ -20,6 +20,7 @@ import scala.util.control.Breaks.breakable
 @Component("cpuStatsCaptcher")
 class CpuStatsCaptcher extends WorkUnitRunable{
   private val TOPIC = "hpdc-cpusum"
+  private val SHELL = "CPU"
   private val logger: Logger = LoggerFactory.getLogger("hpdc")
 
   @Autowired
