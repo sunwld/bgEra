@@ -36,9 +36,6 @@ class CpuStatsCaptcher extends WorkUnitRunable{
     val cmd = shellMap.get("CPU.xsh")
     var session: Ssh2Session = null
     var sshResult: SshResult = null
-    val rs:java.util.Map[String,Any] = new util.HashMap()
-
-    val keys = Array("user", "sys", "wait", "idle")
     try {
       session = resManager.getHostSshConnPoolResource(unit.getTargetId())
       sshResult = session.execCommand(cmd)

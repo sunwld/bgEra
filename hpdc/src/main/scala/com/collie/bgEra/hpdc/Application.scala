@@ -9,7 +9,7 @@ import com.collie.bgEra.cloudApp.dtsf.conf.DtsfConf
 import com.collie.bgEra.cloudApp.kryoUtil.KryoUtil
 import com.collie.bgEra.cloudApp.utils.ContextHolder
 import com.collie.bgEra.commons.util.CommonUtils
-import com.collie.bgEra.hpdc.workUnit.bean.CpuStats
+import com.collie.bgEra.hpdc.workUnit.bean.{CpuStats, HostNetStats, MemStats}
 import org.apache.kafka.clients.producer.KafkaProducer
 import org.springframework.boot.SpringApplication
 import org.springframework.boot.autoconfigure.jdbc.{DataSourceAutoConfiguration, DataSourceTransactionManagerAutoConfiguration}
@@ -38,6 +38,8 @@ class Config extends WebMvcConfigurationSupport {
     logger.info("init Application HPDC, add class to kryo.")
     val map: java.util.Map[Integer,Class[_]] = new util.HashMap()
     map.put(10001,classOf[CpuStats])
+    map.put(10002,classOf[HostNetStats])
+    map.put(10003,classOf[MemStats])
     KryoUtil.addCustomClassRegMap(map)
   }
 

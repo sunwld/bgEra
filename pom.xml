@@ -44,6 +44,10 @@
 
         <kafka-client.version>1.1.1</kafka-client.version>
 
+        <spark.version>2.3.1</spark.version>
+        <scala.version>2.11.8</scala.version>
+        <spark_scala.version>2.11</spark_scala.version>
+
         <ch.ethz.ganymed.version>262</ch.ethz.ganymed.version>
 
         <!--maven插件-->
@@ -234,6 +238,17 @@
                 <version>1.0.0</version>
             </dependency>
 
+            <dependency>
+                <groupId>org.apache.spark</groupId>
+                <artifactId>spark-streaming_${scala.binary.version}</artifactId>
+                <version>${spark.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.spark</groupId>
+                <artifactId>spark-streaming-kafka-0-10_${scala.binary.version}</artifactId>
+                <version>${spark.version}</version>
+            </dependency>
+
         </dependencies>
     </dependencyManagement>
 
@@ -249,6 +264,7 @@
             <artifactId>scala-library</artifactId>
             <version>${scala.version}</version>
         </dependency>
+
     </dependencies>
 
     <build>

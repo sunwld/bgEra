@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE configuration PUBLIC "-//mybatis.org//DTD Config 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-config.dtd">
+
+<configuration>
+
+	<settings>
+		<setting name="callSettersOnNulls" value="true" />
+		<!-- <setting name="logImpl" value="STDOUT_LOGGING" /> -->
+		<setting name="logImpl" value="SLF4J" />
+	</settings>
+
+	<typeAliases>
+
+	</typeAliases>
+
+	<environments default="main">
+
+
+		<environment id="main">
+			<transactionManager type="JDBC" />
+			<dataSource type="JNDI">
+				<property name="data_source" value="jdbc/dc" />
+				<property name="env.java.naming.factory.initial" value="weblogic.jndi.WLInitialContextFactory" />
+			</dataSource>
+		</environment>
+
+		<environment id="targetDB">
+			<transactionManager type="JDBC" />
+			<dataSource type="JNDI">
+				<property name="data_source" value="${jndi}" />
+				<property name="env.java.naming.factory.initial" value="weblogic.jndi.WLInitialContextFactory" />
+			</dataSource>
+		</environment>
+
+		<environment id="short">
+			<transactionManager type="JDBC" />
+			<dataSource type="UNPOOLED">
+				<property name="driver" value="oracle.jdbc.driver.OracleDriver" />
+				<property name="url" value="${url}" />
+				<property name="username" value="${username}" />
+				<property name="password" value="${password}" />
+			</dataSource>
+		</environment>
+
+	</environments>
+
+	<mappers>
+		<mapper resource="com/automt/frag/dao/intf/ConfigTidyFragTaskMapper.xml" />
+		<mapper resource="com/automt/frag/dao/FragMapper.xml" />
+		<mapper resource="com/automt/jobFrame/dao/JobMapper.xml" />
+		<mapper resource="com/automt/dataChart/dao/intf/ActiveDbSessionMapper.xml" />
+		<mapper resource="com/automt/dataChart/dao/intf/HostStatMapper.xml" />
+		<mapper resource="com/automt/dataChart/dao/intf/DbSysstatBaseMapper.xml" />
+		<mapper resource="com/automt/dataChart/dao/intf/TrendDataChartMapper.xml" />
+		<mapper resource="com/automt/dataChart/dao/intf/TrendSnapDrawChartMapper.xml" />
+		<mapper resource="com/automt/dataChart/dao/intf/DbSegmentStatMapper.xml"/>
+		<mapper resource="com/automt/main/dao/intf/MtBaseServMapper.xml" />
+		<mapper resource="com/automt/dataChart/dao/intf/DbUsabilityMapper.xml" />
+		<mapper resource="com/automt/dataSum/chart/ConverDataTochartMapper.xml"/>
+		<mapper resource="com/automt/gm/GlobalManagermentMapper.xml" />
+		<mapper resource="com/automt/dbaccount/AccountMapper.xml" />
+		<mapper resource="com/automt/alert/AlertManagerMapper.xml" />
+		<mapper resource="com/automt/alert/AlertVisibleServMapper.xml" />
+		<mapper resource="com/automt/alert/impl/AlertServiceDaoMapper.xml"/>
+		<mapper resource="com/automt/alert/impl/AlertSamplerDaoMapper.xml"/>
+		<mapper resource="com/automt/alert/impl/SampleVisibleServiceMapper.xml"/>
+		<mapper resource="com/automt/da/DaMapper.xml"/>
+	</mappers>
+</configuration>
