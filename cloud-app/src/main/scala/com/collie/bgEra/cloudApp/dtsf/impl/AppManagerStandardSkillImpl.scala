@@ -4,7 +4,7 @@ import com.collie.bgEra.cloudApp.appm.{AppManagerStandardSkill, ClusterInfo}
 import com.collie.bgEra.cloudApp.context.CloudAppContext
 import com.collie.bgEra.cloudApp.dtsf.{ShardingManager, TaskManager}
 import org.slf4j.{Logger, LoggerFactory}
-import org.springframework.beans.factory.annotation.Autowired
+import org.springframework.beans.factory.annotation.{Autowired, Qualifier}
 import org.springframework.stereotype.Component
 
 import scala.collection.JavaConversions._
@@ -17,6 +17,7 @@ class AppManagerStandardSkillImpl extends AppManagerStandardSkill {
   @Autowired
   private val shardingManager: ShardingManager = null
   @Autowired
+  @Qualifier("distributedTaskBus")
   private val taskBus: DistributedTaskBusImpl = null
 
   private val logger: Logger = LoggerFactory.getLogger("dtsf")

@@ -101,6 +101,11 @@ class DtsfConf extends SchedulingConfigurer{
     val resolver = new PathMatchingResourcePatternResolver()
     val resources = resolver.getResources("classpath*:com/collie/bgEra/cloudApp/dtsf/mapper/*Mapper.xml")
     sqlSessionFactoryBean.setMapperLocations(resources)
+    val mybatisConfXmlPath: String = props.getProperty("dtsf.mybatisConf")
+    if(mybatisConfXmlPath != null && !mybatisConfXmlPath.isEmpty()){
+      val res = resolver.getResource(mybatisConfXmlPath)
+      sqlSessionFactoryBean.setConfigLocation(res)
+    }
     resourceManager.putSqlSessionFactoy("dtsfMain", sqlSessionFactoryBean.getObject())
     sqlSessionFactoryBean
   }

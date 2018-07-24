@@ -15,17 +15,21 @@ import com.collie.bgEra.cloudApp.context.CloudAppContext
 import com.collie.bgEra.cloudApp.dtsf.mapper.TaskMapper
 import org.apache.ibatis.session.SqlSessionFactory
 import org.mybatis.spring.SqlSessionFactoryBean
-import org.springframework.beans.factory.annotation.Autowired
+import org.springframework.beans.factory.annotation.{Autowired, Qualifier}
 import org.springframework.context.annotation.Lazy
 import com.collie.bgEra.cloudApp.ssh2Pool.{Ssh2Session, Ssh2SessionPool, SshConnFactory}
 import org.apache.commons.pool2.impl.GenericObjectPool
 import org.apache.commons.pool2.impl.GenericObjectPoolConfig
+import org.springframework.core.io.support.PathMatchingResourcePatternResolver
 
 @Component
 class ResourceManagerImpl extends ResourceManager{
   @Autowired
   @Lazy
   private val taskMapper: TaskMapper = null
+  @Autowired
+  @Qualifier("cloudAppProps")
+  private val props: Properties = null
   @Autowired
   private val cloudAppContext: CloudAppContext = null
 
@@ -66,6 +70,13 @@ class ResourceManagerImpl extends ResourceManager{
     dataSource.setProxyFilters(ju.Arrays.asList(slf4jLogFilter))
 
     sqlSessionFactoryBean.setDataSource(dataSource)
+
+    val mybatisConfXmlPath: String = props.getProperty("dtsf.mybatisConf")
+    if(mybatisConfXmlPath != null && !mybatisConfXmlPath.isEmpty()){
+      val resolver = new PathMatchingResourcePatternResolver()
+      val res = resolver.getResource(mybatisConfXmlPath)
+      sqlSessionFactoryBean.setConfigLocation(res)
+    }
     sqlSessionFactoryBean.getObject()
   }
 

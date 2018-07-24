@@ -244,7 +244,7 @@ class ZApplicationManager private(
       try {
         appManagerStandardSkill.suspend(clusterInfo)
       } catch {
-        case ex: Exception => throw new AppClusterFatalException("")
+        case ex: Exception => throw new AppClusterFatalException("AppClusterFatalException",ex)
       }
     }
   }
