@@ -56,10 +56,22 @@ class ShardingManagerImpl extends ShardingManager{
     taskMapper.insertZkSessionInfo(clusterInfoList)
   }
 
+  /**
+    * 清空dtsf 的redis 缓存
+    */
   override def flushCache(): Unit = {
     taskMapper.flushDtsfRedisCache()
   }
 
+  /**
+    * 初始化 dtsf的redis缓存
+    * @param clusterInfo
+    */
   override def initRedisCache(clusterInfo: ClusterInfo): Unit = {
   }
+
+  /**
+    *释放 datasorece、ssh2、jmx等资源池
+    */
+  override def flustResource(): Unit = ???
 }

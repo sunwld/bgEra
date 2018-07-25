@@ -13,7 +13,7 @@ import java.{util => ju}
 import com.alibaba.druid.pool.DruidDataSource
 import com.collie.bgEra.cloudApp.context.CloudAppContext
 import com.collie.bgEra.cloudApp.dtsf.mapper.TaskMapper
-import org.apache.ibatis.session.SqlSessionFactory
+import org.apache.ibatis.session.{Configuration, SqlSessionFactory, SqlSessionFactoryBuilder}
 import org.mybatis.spring.SqlSessionFactoryBean
 import org.springframework.beans.factory.annotation.{Autowired, Qualifier}
 import org.springframework.context.annotation.Lazy
@@ -84,6 +84,14 @@ class ResourceManagerImpl extends ResourceManager{
     dbSqlSessionFactoyMap.put(name,factory)
   }
 
+  override def flushAllDataSourceResource(): Unit = {
+    dbSqlSessionFactoyMap.synchronized{
+      dbSqlSessionFactoyMap.foreach(m => {
+//        m._2.cl
+      })
+    }
+  }
+
 
   private val ssh2ConnPoolsMap: java.util.Map[String,Ssh2SessionPool] = new ju.HashMap()
   override def getHostSshConnPoolResource(targetId: String): Ssh2Session = {
@@ -122,7 +130,19 @@ class ResourceManagerImpl extends ResourceManager{
     pool
   }
 
+  override def flushAllHostSshConnPoolResource(): Unit = {
+    ssh2ConnPoolsMap.synchronized{
+      ssh2ConnPoolsMap.foreach(m => {
+        if(m._2.getNumIdle() == 0){
+          ssh2ConnPoolsMap.remove(m._1).close()
+        }
+      })
+    }
+  }
+
   override def getJmxConnPoolResource(targetId: String): JmxConnPoolResource = ???
 
   override def initJmxConnPoolResource(resourceContext: Properties): Unit = ???
+
+  override def flushAllmxConnPoolResource(): Unit = ???
 }

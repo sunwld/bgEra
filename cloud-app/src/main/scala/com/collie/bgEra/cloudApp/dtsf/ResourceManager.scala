@@ -12,11 +12,17 @@ trait ResourceManager {
 
   def initDataSourceResource(name: String): SqlSessionFactory
 
+  def flushAllDataSourceResource(): Unit
+
   def getHostSshConnPoolResource(targetId: String): Ssh2Session
 
   def initHostSshConnPoolResource(targetId: String): Ssh2SessionPool
 
+  def flushAllHostSshConnPoolResource(): Unit
+
   def getJmxConnPoolResource(targetId: String): JmxConnPoolResource
 
   def initJmxConnPoolResource(resourceContext: Properties): Unit
+
+  def flushAllmxConnPoolResource(): Unit
 }
