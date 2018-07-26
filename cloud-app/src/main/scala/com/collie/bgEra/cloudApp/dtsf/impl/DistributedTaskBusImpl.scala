@@ -33,6 +33,8 @@ class DistributedTaskBusImpl extends DistributedTaskBus {
     @Autowired
     private val taskManager: TaskManagerImpl = null
     @Autowired
+    @Qualifier("dtsfMainScheduler")
+    @Lazy
     private val mainScheduler: Scheduler = null
     @Autowired
     private val taskMapper:TaskMapper = null

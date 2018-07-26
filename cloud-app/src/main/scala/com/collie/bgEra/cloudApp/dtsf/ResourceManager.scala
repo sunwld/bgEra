@@ -2,6 +2,7 @@ package com.collie.bgEra.cloudApp.dtsf
 
 import java.util.Properties
 
+import com.alibaba.druid.pool.DruidDataSource
 import com.collie.bgEra.cloudApp.dtsf.bean.JmxConnPoolResource
 import com.collie.bgEra.cloudApp.ssh2Pool.{Ssh2Session, Ssh2SessionPool}
 import org.apache.ibatis.session.SqlSessionFactory
@@ -10,7 +11,9 @@ trait ResourceManager {
 
   def getDataSourceResource(targetId: String): SqlSessionFactory
 
-  def initDataSourceResource(name: String): SqlSessionFactory
+  def initDataSourceResource(name: String): (SqlSessionFactory,DruidDataSource)
+
+  def putSqlSessionFactoy(name: String,ds:DruidDataSource,factory: SqlSessionFactory): Unit
 
   def flushAllDataSourceResource(): Unit
 
@@ -24,5 +27,5 @@ trait ResourceManager {
 
   def initJmxConnPoolResource(resourceContext: Properties): Unit
 
-  def flushAllmxConnPoolResource(): Unit
+  def flushAllJmxConnPoolResource(): Unit
 }

@@ -117,13 +117,13 @@ public class RedisCacheAspect {
 
       if(redisService.hasKey(key)){
         result = redisService.popZSetItemByScoreWithScore(key,min,max);
-        logger.info("pop zset item from redis, redis key:" + key + ", minScore:" + min + ",maxScore" + max + ", items:" + result);
+        logger.trace("pop zset item from redis, redis key:" + key + ", minScore:" + min + ",maxScore" + max + ", items:" + result);
       }else{
         latchId = getLatch(key);
         result = (List<ZSetItemBean>) pjp.proceed();
         redisService.addZsetItems(key,result, -1);
         result = redisService.popZSetItemByScoreWithScore(key,min,max);
-        logger.info("pop zset item from db, redis key:" + key + ", minScore:" + min + ",maxScore" + max + ", items:" + result);
+        logger.trace("pop zset item from db, redis key:" + key + ", minScore:" + min + ",maxScore" + max + ", items:" + result);
       }
       return result;
     } finally {

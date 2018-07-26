@@ -1,6 +1,6 @@
 package com.collie.bgEra.hpdc.workUnit.bean
 
-import com.fasterxml.jackson.databind.BeanProperty
+import scala.beans.BeanProperty
 
 class CpuProcessorStats {
 
