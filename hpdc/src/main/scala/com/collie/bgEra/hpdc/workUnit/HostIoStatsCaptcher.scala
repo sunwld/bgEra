@@ -1,17 +1,155 @@
 package com.collie.bgEra.hpdc.workUnit
 
-import com.collie.bgEra.cloudApp.dtsf.WorkUnitRunable
+import java.util
+
+import com.collie.bgEra.cloudApp.dtsf.{ResourceManager, WorkUnitRunable}
 import com.collie.bgEra.cloudApp.dtsf.bean.WorkUnitInfo
+import com.collie.bgEra.cloudApp.ssh2Pool.{Ssh2Session, SshResult}
+import com.collie.bgEra.commons.util.SerialNumberUtils
+import com.collie.bgEra.hpdc.workUnit.bean.HostIOStats
+import org.apache.kafka.clients.producer.{KafkaProducer, ProducerRecord}
+import org.slf4j.{Logger, LoggerFactory}
+import org.springframework.beans.factory.annotation.{Autowired, Qualifier}
 import org.springframework.stereotype.Component
 
+import scala.collection.JavaConversions._
+import scala.util.control.Breaks._
+import scala.collection.mutable.{ListBuffer}
+
 @Component("hostIoStatsCaptcher")
-class HostIoStatsCaptcher extends WorkUnitRunable{
+class HostIoStatsCaptcher extends WorkUnitRunable {
   private val TOPIC = "hpdc-iostat"
   private val SHELL = "IOSTAT"
 
+  private val logger: Logger = LoggerFactory.getLogger("hpdc")
+
+  @Autowired
+  @Qualifier("hostShellMap")
+  private val shellMap: java.util.Map[String, String] = null
+
+  @Autowired
+  private val kfkProducer: KafkaProducer[String, Object] = null
+
+  @Autowired
+  private val resManager: ResourceManager = null
+
   override def runWork(workUnitInfo: WorkUnitInfo): Unit = {
 
+    val cmd = shellMap.get(SHELL)
+    var session: Ssh2Session = null
+    var sshResult: SshResult = null
+    try {
+      session = resManager.getHostSshConnPoolResource(workUnitInfo.getTargetId())
+      sshResult = session.execCommand(cmd)
+
+      /**
+        * K: Device name
+        * V:(DeviceName,IOKB,avgWait,busy%,snapCount)
+        *
+        */
+      val hostIoStats: HostIOStats = new HostIOStats()
+      hostIoStats.snapId = SerialNumberUtils.getSerialByTrunc10s(workUnitInfo.thisTime, true)
+      hostIoStats.targetId = workUnitInfo.targetId
+
+      if (sshResult.isFinishAndCmdSuccess()) {
+        var statsList: ListBuffer[(String, Double, Double, Float, Int)] = null
+        val osType = sshResult.getStrout().get(0).split(":")(1)
+        osType match {
+          case "LINUX" => statsList = parseLinuxResult(sshResult.getStrout())
+          case "AIX" => statsList = parseAixResult(sshResult.getStrout())
+          case "SOLARIS" => statsList = parseSolarisResult(sshResult.getStrout())
+        }
+
+        hostIoStats.statsResult = statsList.groupBy(_._1).mapValues(v => {
+          v.reduce((s, i) => {
+            (i._1, s._2 + i._2, s._3 + i._3, s._4 + i._4, s._5 + i._5)
+          })
+        })
+
+        val record: ProducerRecord[String, Object] = new ProducerRecord(TOPIC, workUnitInfo.targetId, hostIoStats)
+        kfkProducer.send(record)
+      }
+
+    } catch {
+      case e: Exception => {
+        logger.warn(s"Captcher cpusum failed, shell result[${sshResult}]", e)
+      }
+    } finally {
+      if (session != null) {
+        session.close()
+      }
+    }
+  }
+
+  private def parseLinuxResult(resLines: util.List[String]): ListBuffer[(String, Double, Double, Float, Int)] = {
     /**
+      * LINUX
+      * OSTYPE:LINUX
+      * Linux 3.10.0-693.el7.x86_64 (devops1)   07/24/2018      _x86_64_        (16 CPU)
+      *
+      * Device:         rrqm/s   wrqm/s     r/s     w/s    rkB/s    wkB/s avgrq-sz avgqu-sz   await r_await w_await  svctm  %util
+      * dm-0              0.00     0.00    0.01    0.73     1.80     5.39    19.39     0.00    2.77    4.71    2.75   1.29   0.10
+      * dm-3              0.00     0.00    0.00   12.00     0.00    48.00     8.00     0.01    0.92    0.00    0.92   0.92   1.10
+      *
+      * Device:         rrqm/s   wrqm/s     r/s     w/s    rkB/s    wkB/s avgrq-sz avgqu-sz   await r_await w_await  svctm  %util
+      * dm-2              0.00     0.00    0.00    2.00     0.00     4.00     4.00     0.00    0.00    0.00    0.00   0.00   0.00
+      * dm-3              0.00     0.00    0.00    2.00     0.00     8.00     8.00     0.00    1.50    0.00    1.50   1.50   0.30
+      *
+      */
+
+    val linuxDataParten = "(^Device:)|(\\d$)".r
+    val numumberParten = "^\\d".r
+    val dataLineSplitStr = "(\\s{1,})|(\\t{1,})".r
+
+    //(DeviceName,IOKB,avgWait,busy%,snapCount)
+    val statRes: ListBuffer[(String, Double, Double, Float, Int)] = ListBuffer()
+
+    resLines.foreach(line => {
+      if (!linuxDataParten.findFirstIn(line).isEmpty) {
+        /**
+          * Device:         rrqm/s   wrqm/s     r/s     w/s    rkB/s    wkB/s avgrq-sz avgqu-sz   await r_await w_await  svctm  %util
+          * dm-0              0.00     0.00    0.01    0.73     1.80     5.39    19.39     0.00    2.77    4.71    2.75   1.29   0.10
+          * dm-3              0.00     0.00    0.00   12.00     0.00    48.00     8.00     0.01    0.92    0.00    0.92   0.92   1.10
+          */
+        var rkbp: Int = -1
+        var wkbp: Int = -1
+        var devp: Int = -1
+        var avwaitp: Int = -1
+        var busyp: Int = -1
+
+        val datItems = dataLineSplitStr.split(line)
+        if (datItems.length > 5 && !datItems(0).equals("Device:")) {
+          //dm-0              0.00     0.00    0.01    0.73     1.80     5.39    19.39     0.00    2.77    4.71    2.75   1.29   0.10
+          statRes.append((datItems(devp),
+            datItems(rkbp).toDouble + datItems(wkbp).toDouble,
+            datItems(avwaitp).toDouble,
+            datItems(busyp).toFloat,
+            1))
+        } else if (datItems.length > 5 && datItems(0).equals("Device:")) {
+          //Device:         rrqm/s   wrqm/s     r/s     w/s    rkB/s    wkB/s avgrq-sz avgqu-sz   await r_await w_await  svctm  %util
+          for (i <- 0 until datItems.length) {
+            if (datItems(i).startsWith("rkB") || datItems(i).startsWith("rkb")) {
+              rkbp = i
+            } else if (datItems(i).startsWith("wkB") || datItems(i).startsWith("wkb")) {
+              wkbp = i
+            } else if (datItems(i).startsWith("Dev") || datItems(i).startsWith("dev")) {
+              devp = i
+            } else if (datItems(i).startsWith("await") || datItems(i).startsWith("Awai")) {
+              avwaitp = i
+            } else if (datItems(i).contains("util") || datItems(i).startsWith("busy")) {
+              busyp = i
+            }
+          }
+        }
+      } else {
+        //Linux 3.10.0-693.el7.x86_64 (devops1)   07/24/2018      _x86_64_        (16 CPU)
+      }
+    })
+    statRes
+  }
+
+  private def parseAixResult(resLines: util.List[String]): ListBuffer[(String, Double, Double, Float, Int)] = {
+    /*
       * AIX:
       * OSTYPE:AIX
       *
@@ -23,54 +161,87 @@ class HostIoStatsCaptcher extends WorkUnitRunable{
       *
       * 11:35:10     hdisk3      0      0.0        0        0      0.0      0.0
       *              hdisk1     72      0.0      173      692      0.0      4.6
-      *              hdisk0     79      0.0      172      688      0.0      5.1
-      *              hdisk2      0      0.0        0        0      0.0      0.0
-      *              hdisk12      0      0.0        0        0      0.0      0.0
-      *              hdisk4      0      0.0        0        0      0.0      0.0
-      *              hdisk7      0      0.0        0        0      0.0      0.0
-      *              hdisk8      0      0.0        0        0      0.0      0.0
-      *              hdisk6      0      0.0        0        0      0.0      0.0
       *              hdisk14      1      0.0        2      128      0.0      0.7
       * *** ***
       *              hdisk1070      0      0.0        0        0      0.0      0.0
-      *              hdisk1064      0      0.0        0        0      0.0      0.0
-      *              hdisk1069      0      0.0        0        0      0.0      0.0
-      *              hdisk1068      0      0.0        0        0      0.0      0.0
       *              cd1      0      0.0        0        0      0.0      0.0
       *              cd0      0      0.0        0        0      0.0      0.0
-      *
       *
       * 11:35:11     hdisk3      0      0.0        0        0      0.0      0.0
       *              hdisk1     71      0.0      169      677      0.0      4.5
-      *              hdisk0     88      0.0      169      677      0.0      5.3
-      *              hdisk2      0      0.0        0        0      0.0      0.0
-      *              hdisk12      0      0.0        0        0      0.0      0.0
-      *              hdisk4      0      0.0        0        0      0.0      0.0
-      *              hdisk7      0      0.0        0        0      0.0      0.0
-      *              hdisk8      0      0.0        0        0      0.0      0.0
-      *              hdisk6      0      0.0        0        0      0.0      0.0
-      * *** ***
-      *              hdisk1058      0      0.0        0        0      0.0      0.0
-      *              hdisk1063      0      0.0        0        0      0.0      0.0
-      *              hdisk1061      0      0.0        0        0      0.0      0.0
-      *              hdisk1062      0      0.0        0        0      0.0      0.0
-      *              hdisk1065      0      0.0        0        0      0.0      0.0
-      *              hdisk1067      0      0.0        0        0      0.0      0.0
-      *              hdisk1066      0      0.0        0        0      0.0      0.0
-      *              hdisk1054      0      0.0        0        0      0.0      0.0
-      *              hdisk1070      0      0.0        0        0      0.0      0.0
-      *              hdisk1064      0      0.0        0        0      0.0      0.0
-      *              hdisk1069      0      0.0        0        0      0.0      0.0
-      *              hdisk1068      0      0.0        0        0      0.0      0.0
-      *              cd1      0      0.0        0        0      0.0      0.0
       *              cd0      0      0.0        0        0      0.0      0.0
       *
-      *
-      *
+      * Average      hdisk3      0      0.0        0        0      0.0      0.0
+      *              hdisk1      1      0.0        2        8      0.0      3.8
+      *              hdisk0      2      0.0        2        8      0.0      3.9
       */
 
+    val aixOsInfoParten = "(^AIX)|(^System)".r
+    val aixDataParten = "(^\\d{1,2}:\\d{1,2}:\\d{1,2})|(^\\s+)".r
+    val aixTimeColPartem = "^\\d{1,2}:\\d{1,2}:\\d{1,2}".r
+    val numumberParten = "^\\d".r
+    val dataLineSplitStr = "\\s{1,}|\\t{1,}".r
 
-    /**
+
+    //(DeviceName,IOKB,avgWait,busy%,snapCount)
+    val statRes: ListBuffer[(String, Double, Double, Float, Int)] = ListBuffer()
+
+    breakable {
+      resLines.foreach(line => {
+        if (!aixDataParten.findFirstIn(line).isEmpty) {
+          /*
+            * 11:35:09     device    %busy    avque    r+w/s    Kbs/s   avwait   avserv
+            *
+            * 11:35:10     hdisk3      0      0.0        0        0      0.0      0.0
+            *              hdisk1     72      0.0      173      692      0.0      4.6
+            */
+          var kbp: Int = -1
+          var devp: Int = -1
+          var avwaitp: Int = -1
+          var busyp: Int = -1
+
+          val datItems = dataLineSplitStr.split(line)
+
+          if (!numumberParten.findFirstIn(datItems.last).isEmpty) {
+            //11:35:10     hdisk3      0      0.0        0        0      0.0      0.0
+            //             hdisk1     72      0.0      173      692      0.0      4.6
+            statRes.append((datItems(devp),
+              datItems(kbp).toDouble,
+              datItems(avwaitp).toDouble,
+              datItems(busyp).toFloat,
+              1))
+
+          } else {
+            //11:35:09     device    %busy    avque    r+w/s    Kbs/s   avwait   avserv
+            for (i <- 0 until datItems.length) {
+              if (datItems(i).startsWith("Kbs") || datItems(i).startsWith("kbs")) {
+                kbp = i
+              } else if (datItems(i).startsWith("dev") || datItems(i).startsWith("Dev")) {
+                devp = i
+              } else if (datItems(i).startsWith("avs") || datItems(i).startsWith("Avs")) {
+                avwaitp = i
+              } else if (datItems(i).contains("busy") || datItems(i).startsWith("util")) {
+                busyp = i
+              }
+            }
+          }
+        } else {
+          /**
+            * Average      hdisk3      0      0.0        0        0      0.0      0.0
+            * * hdisk1      1      0.0        2        8      0.0      3.8
+            * * hdisk0      2      0.0        2        8      0.0      3.9
+            */
+          if (line.startsWith("Ave") || line.startsWith("ave")) {
+            break()
+          }
+        }
+      })
+    }
+    statRes
+  }
+
+  private def parseSolarisResult(resLines: util.List[String]): ListBuffer[(String, Double, Double, Float, Int)] = {
+    /*
       * SOLARIS:
       * OSTYPE:SOLARIS
       *
@@ -81,144 +252,85 @@ class HostIoStatsCaptcher extends WorkUnitRunable{
       *
       * 11:42:24   fp0               0     0.0       0       0     0.0     0.0
       *            fp2              99     2.8    1050  117269     0.0     2.6
-      *            fp3              56     0.6     173   31452     0.0     3.6
-      *            fp6               0     0.0       0       0     0.0     0.0
-      *            iscsi0            0     0.0       0       0     0.0     0.0
-      *            nxup0             0     0.0       0       0     0.0     0.0
-      *            scsi_vhc          0     0.0       0       0     0.0     0.0
       *            sd5              13     0.1     103    7737     0.0     1.4
       *            sd5,a             0     0.0       0       0     0.0     0.0
-      *            sd5,b             0     0.0       0       0     0.0     0.0
-      *            sd5,c             0     0.0       0       0     0.0     0.0
-      *            sd5,d             2     0.0      48     221     0.0     0.4
-      *            sd5,e             5     0.0      37     588     0.0     1.3
-      *            sd5,f             6     0.1      12    4815     0.0     5.2
-      *            sd5,g             2     0.0       6    2097     0.0     2.6
       *            sd5,h             0     0.0       1      16     0.0     0.4
       *            sd7              33     0.5     169   15364     0.0     2.8
       * *** ***
-      *            sd32,b            0     0.0       0       0     0.0     0.0
-      *            sd32,d            3     0.0       5    4036     0.0     6.3
-      *            sd32,e            9     0.1      43     683     0.0     2.2
-      *            sd32,f            2     0.0       4    2066     0.0     6.0
-      *            sd32,g           10     0.1      34    2574     0.0     3.1
-      *            sd32,h            0     0.0       0       0     0.0     0.0
-      *            vdc0              0     0.0       0       0     0.0     0.0
-      *            vdc1              0     0.0       0       0     0.0     0.0
-      *
       * 11:42:25   fp0               0     0.0       0       0     0.0     0.0
       *            fp2              98     2.2    1132   32001     0.0     2.0
-      *            fp3              19     0.2     112    7469     0.0     2.0
-      *            fp6               0     0.0       0       0     0.0     0.0
-      *            iscsi0            0     0.0       0       0     0.0     0.0
-      *            nxup0             0     0.0       0       0     0.0     0.0
-      *            scsi_vhc          0     0.0       0       0     0.0     0.0
-      *            sd5              16     0.2     212    2559     0.0     0.8
-      *            sd5,a             0     0.0       0       0     0.0     0.0
-      *            sd5,b             2     0.0      69     229     0.0     0.3
-      *            sd5,c             0     0.0       0       0     0.0     0.0
-      *            sd5,d             2     0.0      57     253     0.0     0.3
-      *            sd5,e             4     0.0      18     290     0.0     2.4
-      *            sd5,f             7     0.1      37    1304     0.0     1.8
-      *            sd5,g             2     0.0      29     467     0.0     0.5
-      *            sd5,h             0     0.0       1      16     0.0     4.4
-      * *** ***
-      *            sd32,b            0     0.0       0       0     0.0     0.0
-      *            sd32,d            4     0.0       8     129     0.0     5.2
-      *            sd32,e            6     0.1      10    2190     0.0     7.1
-      *            sd32,f            2     0.0      17     274     0.0     1.0
-      *            sd32,g           18     0.2      88    4154     0.0     2.2
-      *            sd32,h            0     0.0       0       0     0.0     0.0
-      *            vdc0              0     0.0       0       0     0.0     0.0
-      *            vdc1              0     0.0       0       0     0.0     0.0
-      *
-      *
       * Average    fp0               0     0.0       0       0     0.0     0.0
       *            fp2              99     2.5    1091   74918     0.0     2.3
-      *            fp3              38     0.4     142   19540     0.0     3.0
-      *            fp6               0     0.0       0       0     0.0     0.0
-      *            iscsi0            0     0.0       0       0     0.0     0.0
-      *            nxup0             0     0.0       0       0     0.0     0.0
-      *            scsi_vhc          0     0.0       0       0     0.0     0.0
-      *            sd5              15     0.2     157    5165     0.0     1.0
-      *            sd5,a             0     0.0       0       0     0.0     0.0
-      *            sd5,b             1     0.0      34     114     0.0     0.3
-      *            sd5,c             0     0.0       0       0     0.0     0.0
-      *            sd5,d             2     0.0      52     237     0.0     0.4
-      * *** ***
-      *            sd32             26     0.3     104    8062     0.0     2.7
-      *            sd32,a            0     0.0       0       0     0.0     0.0
-      *            sd32,b            0     0.0       0       0     0.0     0.0
-      *            sd32,d            4     0.0       6    2095     0.0     5.6
-      *            sd32,e            8     0.1      26    1432     0.0     3.1
-      *            sd32,f            2     0.0      10    1176     0.0     1.9
-      *            sd32,g           14     0.1      60    3359     0.0     2.4
-      *            sd32,h            0     0.0       0       0     0.0     0.0
-      *            vdc0              0     0.0       0       0     0.0     0.0
       *            vdc1              0     0.0       0       0     0.0     0.0
       *
       *
       */
 
+    val solarisDataParten = "(^\\d{1,2}:\\d{1,2}:\\d{1,2})|(^\\s{1,}|\\t{1,})".r
+    val solarisTimeColPartem = "^\\d{1,2}:\\d{1,2}:\\d{1,2}".r
+    val numumberParten = "^\\d".r
+    val dataLineSplitStr = "\\s{1,}|\\t{1,}".r
 
-    /**
-      * LINUX
-      * OSTYPE:LINUX
-      * Linux 3.10.0-693.el7.x86_64 (devops1)   07/24/2018      _x86_64_        (16 CPU)
-      *
-      * Device:         rrqm/s   wrqm/s     r/s     w/s    rkB/s    wkB/s avgrq-sz avgqu-sz   await r_await w_await  svctm  %util
-      * fd0               0.00     0.00    0.00    0.00     0.00     0.00     8.00     0.00   47.00   47.00    0.00  47.00   0.00
-      * sdb               0.00     0.03    0.00    4.84     0.04    35.44    14.66     0.01    1.32    0.56    1.32   0.83   0.40
-      * sda               0.00     0.04    0.01    0.74     1.81     5.40    19.22     0.00    2.48    4.66    2.46   1.28   0.10
-      * scd0              0.00     0.00    0.00    0.00     0.00     0.00    68.00     0.00    2.23    2.23    0.00   1.84   0.00
-      * dm-0              0.00     0.00    0.01    0.73     1.80     5.39    19.39     0.00    2.77    4.71    2.75   1.29   0.10
-      * dm-1              0.00     0.00    0.00    0.00     0.00     0.00    46.99     0.00    0.38    0.38    0.00   0.29   0.00
-      * dm-2              0.00     0.00    0.00    2.15     0.04    13.86    12.95     0.00    1.74    0.58    1.74   1.21   0.26
-      * dm-3              0.00     0.00    0.00    1.83     0.00    21.58    23.59     0.00    1.55    0.49    1.55   1.18   0.22
-      *
-      * Device:         rrqm/s   wrqm/s     r/s     w/s    rkB/s    wkB/s avgrq-sz avgqu-sz   await r_await w_await  svctm  %util
-      * fd0               0.00     0.00    0.00    0.00     0.00     0.00     0.00     0.00    0.00    0.00    0.00   0.00   0.00
-      * sdb               0.00     0.00    0.00    6.00     0.00    16.00     5.33     0.01    0.83    0.00    0.83   0.83   0.50
-      * sda               0.00     0.00    0.00    1.00     0.00     4.00     8.00     0.00    0.00    0.00    0.00   0.00   0.00
-      * scd0              0.00     0.00    0.00    0.00     0.00     0.00     0.00     0.00    0.00    0.00    0.00   0.00   0.00
-      * dm-0              0.00     0.00    0.00    1.00     0.00     4.00     8.00     0.00    0.00    0.00    0.00   0.00   0.00
-      * dm-1              0.00     0.00    0.00    0.00     0.00     0.00     0.00     0.00    0.00    0.00    0.00   0.00   0.00
-      * dm-2              0.00     0.00    0.00    0.00     0.00     0.00     0.00     0.00    0.00    0.00    0.00   0.00   0.00
-      * dm-3              0.00     0.00    0.00    4.00     0.00    16.00     8.00     0.01    1.25    0.00    1.25   1.25   0.50
-      *
-      *
-      *
-      *
-      * Device:         rrqm/s   wrqm/s     r/s     w/s    rkB/s    wkB/s avgrq-sz avgqu-sz   await r_await w_await  svctm  %util
-      * fd0               0.00     0.00    0.00    0.00     0.00     0.00     0.00     0.00    0.00    0.00    0.00   0.00   0.00
-      * sdb               0.00     0.00    0.00    0.00     0.00     0.00     0.00     0.00    0.00    0.00    0.00   0.00   0.00
-      * sda               0.00     0.00    0.00   15.00     0.00   176.00    23.47     0.12    7.93    0.00    7.93   2.13   3.20
-      * scd0              0.00     0.00    0.00    0.00     0.00     0.00     0.00     0.00    0.00    0.00    0.00   0.00   0.00
-      * dm-0              0.00     0.00    0.00   14.00     0.00   176.00    25.14     0.12    8.50    0.00    8.50   2.29   3.20
-      * dm-1              0.00     0.00    0.00    0.00     0.00     0.00     0.00     0.00    0.00    0.00    0.00   0.00   0.00
-      * dm-2              0.00     0.00    0.00    0.00     0.00     0.00     0.00     0.00    0.00    0.00    0.00   0.00   0.00
-      * dm-3              0.00     0.00    0.00    0.00     0.00     0.00     0.00     0.00    0.00    0.00    0.00   0.00   0.00
-      *
-      * Device:         rrqm/s   wrqm/s     r/s     w/s    rkB/s    wkB/s avgrq-sz avgqu-sz   await r_await w_await  svctm  %util
-      * fd0               0.00     0.00    0.00    0.00     0.00     0.00     0.00     0.00    0.00    0.00    0.00   0.00   0.00
-      * sdb               0.00     0.00    0.00   18.00     0.00    48.00     5.33     0.01    0.61    0.00    0.61   0.61   1.10
-      * sda               0.00     0.00    0.00    3.00     0.00    20.00    13.33     0.00    0.33    0.00    0.33   0.33   0.10
-      * scd0              0.00     0.00    0.00    0.00     0.00     0.00     0.00     0.00    0.00    0.00    0.00   0.00   0.00
-      * dm-0              0.00     0.00    0.00    3.00     0.00    20.00    13.33     0.00    0.33    0.00    0.33   0.33   0.10
-      * dm-1              0.00     0.00    0.00    0.00     0.00     0.00     0.00     0.00    0.00    0.00    0.00   0.00   0.00
-      * dm-2              0.00     0.00    0.00    0.00     0.00     0.00     0.00     0.00    0.00    0.00    0.00   0.00   0.00
-      * dm-3              0.00     0.00    0.00   12.00     0.00    48.00     8.00     0.01    0.92    0.00    0.92   0.92   1.10
-      *
-      * Device:         rrqm/s   wrqm/s     r/s     w/s    rkB/s    wkB/s avgrq-sz avgqu-sz   await r_await w_await  svctm  %util
-      * fd0               0.00     0.00    0.00    0.00     0.00     0.00     0.00     0.00    0.00    0.00    0.00   0.00   0.00
-      * sdb               0.00     0.00    0.00    3.00     0.00     8.00     5.33     0.00    1.00    0.00    1.00   1.00   0.30
-      * sda               0.00     0.00    0.00    0.00     0.00     0.00     0.00     0.00    0.00    0.00    0.00   0.00   0.00
-      * scd0              0.00     0.00    0.00    0.00     0.00     0.00     0.00     0.00    0.00    0.00    0.00   0.00   0.00
-      * dm-0              0.00     0.00    0.00    0.00     0.00     0.00     0.00     0.00    0.00    0.00    0.00   0.00   0.00
-      * dm-1              0.00     0.00    0.00    0.00     0.00     0.00     0.00     0.00    0.00    0.00    0.00   0.00   0.00
-      * dm-2              0.00     0.00    0.00    2.00     0.00     4.00     4.00     0.00    0.00    0.00    0.00   0.00   0.00
-      * dm-3              0.00     0.00    0.00    2.00     0.00     8.00     8.00     0.00    1.50    0.00    1.50   1.50   0.30
-      *
-      */
+
+    //(DeviceName,IOKB,avgWait,busy%,snapCount)
+    val statRes: ListBuffer[(String, Double, Double, Float, Int)] = ListBuffer()
+
+    breakable {
+      resLines.foreach(line => {
+        if (!solarisDataParten.findFirstIn(line).isEmpty) {
+          // 11:42:23   device        %busy   avque   r+w/s  blks/s  avwait  avserv
+          //
+          // 11:42:24   fp0               0     0.0       0       0     0.0     0.0
+          //            fp2              99     2.8    1050  117269     0.0     2.6
+          //            sd5              13     0.1     103    7737     0.0     1.4
+          //            sd5,a             0     0.0       0       0     0.0     0.0
+          //            sd5,h             0     0.0       1      16     0.0     0.4
+          //            sd7              33     0.5     169   15364     0.0     2.8
+          var kbp: Int = -1
+          var devp: Int = -1
+          var avwaitp: Int = -1
+          var busyp: Int = -1
+
+          val datItems = dataLineSplitStr.split(line)
+
+          if (!numumberParten.findFirstIn(datItems.last).isEmpty) {
+            // 11:42:24   fp0               0     0.0       0       0     0.0     0.0
+            //            fp2              99     2.8    1050  117269     0.0     2.6
+            //            sd5,a             0     0.0       0       0     0.0     0.0
+            //            sd5,h             0     0.0       1      16     0.0     0.4
+            if (!datItems(devp).contains(",")) {
+              statRes.append((datItems(devp),
+                datItems(kbp).toDouble / 2,
+                datItems(avwaitp).toDouble,
+                datItems(busyp).toFloat,
+                1))
+            }
+
+          } else {
+            // 11:42:23   device        %busy   avque   r+w/s  blks/s  avwait  avserv
+            for (i <- 0 until datItems.length) {
+              if (datItems(i).startsWith("blks") || datItems(i).startsWith("Blks")) {
+                kbp = i
+              } else if (datItems(i).startsWith("dev") || datItems(i).startsWith("Dev")) {
+                devp = i
+              } else if (datItems(i).startsWith("avs") || datItems(i).startsWith("Avs")) {
+                avwaitp = i
+              } else if (datItems(i).contains("busy") || datItems(i).startsWith("util")) {
+                busyp = i
+              }
+            }
+          }
+        } else {
+          // Average    fp0               0     0.0       0       0     0.0     0.00
+          //            fp2              99     2.5    1091   74918     0.0     2.3
+          //            vdc1              0     0.0       0       0     0.0     0.0
+          if (line.startsWith("Ave") || line.startsWith("ave")) {
+            break()
+          }
+        }
+      })
+    }
+    statRes
   }
+
 }

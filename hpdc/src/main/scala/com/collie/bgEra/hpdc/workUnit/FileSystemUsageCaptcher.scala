@@ -1,11 +1,35 @@
 package com.collie.bgEra.hpdc.workUnit
 
-import com.collie.bgEra.cloudApp.dtsf.WorkUnitRunable
+import java.util
+
+import com.collie.bgEra.cloudApp.dtsf.{ResourceManager, WorkUnitRunable}
 import com.collie.bgEra.cloudApp.dtsf.bean.WorkUnitInfo
+import com.collie.bgEra.cloudApp.ssh2Pool.{Ssh2Session, SshResult}
+import com.collie.bgEra.commons.util.SerialNumberUtils
+import com.collie.bgEra.hpdc.workUnit.bean.FilesystemUsageStats
+import org.apache.kafka.clients.producer.KafkaProducer
+import org.slf4j.{Logger, LoggerFactory}
+import org.springframework.beans.factory.annotation.{Autowired, Qualifier}
+
+import scala.collection.JavaConversions._
+import scala.collection.mutable.{ListBuffer}
 
 class FileSystemUsageCaptcher extends WorkUnitRunable {
   private val TOPIC = "hpdc-fsusage"
-  private val SHELL="FSSTAT"
+  private val SHELL = "FSSTAT"
+
+  private val logger: Logger = LoggerFactory.getLogger("hpdc")
+
+  @Autowired
+  @Qualifier("hostShellMap")
+  private val shellMap: java.util.Map[String, String] = null
+
+  @Autowired
+  private val kfkProducer: KafkaProducer[String, Object] = null
+
+  @Autowired
+  private val resManager: ResourceManager = null
+
   override def runWork(workUnitInfo: WorkUnitInfo): Unit = {
 
     /**
@@ -86,5 +110,89 @@ class FileSystemUsageCaptcher extends WorkUnitRunable {
       * rpool                  511967232         384   296156080     1%    /rpool
       */
 
+    val cmd = shellMap.get(SHELL)
+    var session: Ssh2Session = null
+    var sshResult: SshResult = null
+
+    try {
+      session = resManager.getHostSshConnPoolResource(workUnitInfo.getTargetId())
+      sshResult = session.execCommand(cmd)
+
+      var statsResult: FilesystemUsageStats = new FilesystemUsageStats()
+      statsResult.targetId = workUnitInfo.targetId
+      statsResult.snapId = SerialNumberUtils.getSerialByTrunc1min(workUnitInfo.thisTime, true)
+
+      if (sshResult.isFinishAndCmdSuccess()) {
+        val numumberParten = "^\\d".r
+        val dataLineSplitStr = "\\s{1,}|\\t{1,}".r
+        val dataLineSplitStrHead = "(^\\s{1,})|(^\\t{1,})".r
+
+        var tidyShellResultLines: ListBuffer[String] = ListBuffer()
+        sshResult.getStrout.foreach(line => {
+          /**
+            * rpool/VARSHARE         511967232     9695888   296156080     4%    /var/share
+            * rpool/export/home/grid
+            * 511967232    20884160   296156080     7%    /export/home/grid
+            */
+          if (!dataLineSplitStrHead.findFirstIn(line).isEmpty) {
+            //     511967232    20884160   296156080     7%    /export/home/grid
+            val integLine = tidyShellResultLines.trimEnd(1) + line
+            tidyShellResultLines += integLine
+          } else {
+            //rpool/VARSHARE         511967232     9695888   296156080     4%    /var/share
+            tidyShellResultLines += line
+          }
+        })
+
+        tidyShellResultLines.foreach(line => {
+          val lis = dataLineSplitStr.split(line)
+
+          if (!numumberParten.findFirstIn(lis.takeRight(4)(0)).isEmpty) {
+            //  /dev/vx/dsk/dg_bildb1/volbildata5  3670016000 3419718760 250297240      94% /bildata5
+            statsResult.statsResult.put(lis(fsUsageStatsColMap.get("fsName")),
+              (
+                lis(fsUsageStatsColMap.get("fsName")),
+                lis(fsUsageStatsColMap.get("moutDir")),
+                lis(fsUsageStatsColMap.get("usedKb")).toDouble,
+                lis(fsUsageStatsColMap.get("freeKb")).toDouble,
+                lis(fsUsageStatsColMap.get("freePerc")).toFloat
+              ))
+          } else {
+            //  Filesystem           1024-blocks        Used   Available Capacity  Mounted on
+            mapCpuPcStatsCols(lis)
+          }
+
+        })
+      }
+
+    } catch {
+      case e: Exception => {
+        logger.warn(s"Captcher fsUsage failed, shell result[${sshResult}]", e)
+      }
+    } finally {
+      if (session != null) {
+        session.close()
+      }
+    }
+
+  }
+
+  private val fsUsageStatsColMap: java.util.Map[String, Int] = new util.HashMap()
+
+  private def mapCpuPcStatsCols(lineItems: Array[String]): Unit = {
+    for (i <- 0 until lineItems.length) {
+      val s = lineItems(i)
+      if (s.contains("File") || s.contains("file") || s.contains("FS")) {
+        fsUsageStatsColMap.put("fsName", i)
+      } else if (s.contains("Mount") || s.contains("mount")) {
+        fsUsageStatsColMap.put("moutDir", i)
+      } else if (s.contains("Use") || s.contains("use") || s.contains("us")) {
+        fsUsageStatsColMap.put("usedKb", i)
+      } else if (s.contains("Ava") || s.contains("ava") || s.contains("Free") || s.contains("free")) {
+        fsUsageStatsColMap.put("freeKb", i)
+      } else if (s.contains("Cap") || s.contains("cap") || s.contains("Perc") || s.contains("perc")) {
+        fsUsageStatsColMap.put("freePerc", i)
+      }
+    }
   }
 }

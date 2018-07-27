@@ -1,13 +1,14 @@
 package com.collie.bgEra.hpdc.workUnit.bean
 
-import com.fasterxml.jackson.databind.BeanProperty
+import java.util
+
+import scala.beans.BeanProperty
+import scala.collection.mutable
 
 class CpuProcessorStats {
+  @BeanProperty var targetId: String = _
+  @BeanProperty var snapId: String = _
+  @BeanProperty var statsResult:Map[Int,(Int, Float, Float, Float, Float, Int)] = _
 
-  @BeanProperty var cpuId: Int = _
-  @BeanProperty var user: Float = _
-  @BeanProperty var sys: Float = _
-  @BeanProperty var iowait: Float = _
-  @BeanProperty var idle: Float = _
-  override def toString = s"CpuProcessorStats($cpuId, $user, $sys, $iowait, $idle)"
+  override def toString = s"CpuProcessorStats(targetId=$targetId, snapId=$snapId, statsResult=$statsResult)"
 }

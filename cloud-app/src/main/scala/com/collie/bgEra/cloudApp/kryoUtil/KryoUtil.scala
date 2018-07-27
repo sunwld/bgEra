@@ -15,8 +15,8 @@ import org.slf4j.{Logger, LoggerFactory}
 
 import scala.collection.JavaConversions._
 import scala.collection.mutable
-import scala.collection.mutable.ListBuffer
-import java.util.{Calendar, Date}
+import scala.collection.mutable.{ArrayBuffer, ListBuffer}
+import java.util.{Date}
 
 
 object KryoUtil {
@@ -71,6 +71,7 @@ object KryoUtil {
       kryo.register(classOf[util.HashMap[_, _]], 101)
       kryo.register(classOf[util.ArrayList[_]], 102)
       kryo.register(classOf[ListBuffer[_]], 103)
+      kryo.register(classOf[ArrayBuffer[_]], 114)
       kryo.register(classOf[mutable.Seq[_]], 104)
       kryo.register(classOf[mutable.Map[_, _]], 105)
       kryo.register(classOf[mutable.HashMap[_, _]], 106)
@@ -115,6 +116,28 @@ object KryoUtil {
       kryo.register(classOf[Vector[_]], 148)
       kryo.register(classOf[SimpleDateFormat], 147)
       kryo.register(classOf[Object], 149)
+      kryo.register(classOf[Tuple1[_]], 152)
+      kryo.register(classOf[Tuple2[_,_]], 153)
+      kryo.register(classOf[Tuple3[_,_,_]], 154)
+      kryo.register(classOf[Tuple4[_,_,_,_]], 155)
+      kryo.register(classOf[Tuple5[_,_,_,_,_]], 156)
+      kryo.register(classOf[Tuple6[_,_,_,_,_,_]], 157)
+      kryo.register(classOf[Tuple7[_,_,_,_,_,_,_]], 158)
+      kryo.register(classOf[Tuple8[_,_,_,_,_,_,_,_]], 159)
+      kryo.register(classOf[Tuple9[_,_,_,_,_,_,_,_,_]], 160)
+      kryo.register(classOf[Tuple10[_,_,_,_,_,_,_,_,_,_]], 161)
+      kryo.register(classOf[Tuple11[_,_,_,_,_,_,_,_,_,_,_]], 162)
+      kryo.register(classOf[Tuple12[_,_,_,_,_,_,_,_,_,_,_,_]], 163)
+      kryo.register(classOf[Tuple13[_,_,_,_,_,_,_,_,_,_,_,_,_]], 164)
+      kryo.register(classOf[Tuple14[_,_,_,_,_,_,_,_,_,_,_,_,_,_]], 165)
+      kryo.register(classOf[Tuple15[_,_,_,_,_,_,_,_,_,_,_,_,_,_,_]], 166)
+      kryo.register(classOf[Tuple16[_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_]], 167)
+      kryo.register(classOf[Tuple17[_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_]], 168)
+      kryo.register(classOf[Tuple18[_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_]], 169)
+      kryo.register(classOf[Tuple19[_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_]], 170)
+      kryo.register(classOf[Tuple20[_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_]], 171)
+      kryo.register(classOf[Tuple21[_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_]], 172)
+      kryo.register(classOf[Tuple22[_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_]], 173)
 
       var regId: Int = 200
       if (kryoMoudleClassMap != null && !kryoMoudleClassMap.isEmpty()) {

@@ -10,6 +10,8 @@ AIX)
 Linux)
   echo "OSTYPE:LINUX"
   ipcs -m
+  ipcs -mt
+  ipcs -mp
        ;;
 HP-UX)
   echo "OSTYPE:HPUX"

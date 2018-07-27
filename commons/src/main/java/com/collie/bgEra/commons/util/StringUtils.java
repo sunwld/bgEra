@@ -1,11 +1,49 @@
 package com.collie.bgEra.commons.util;
 
 import org.apache.commons.text.StringEscapeUtils;
-
+import org.apache.log4j.Logger;
 import java.util.List;
 
 public class StringUtils {
+    private static Logger logger = Logger.getLogger(StringUtils.class);
+
     protected StringUtils() {
+    }
+
+    public static Integer toInt(String s) {
+        try {
+            return Integer.parseInt(s);
+        } catch (Exception e) {
+            logger.warn("StringUtils parse number failed:" + s, e);
+            return null;
+        }
+    }
+
+    public static Float toFloat(String s) {
+        try {
+            return Float.parseFloat(s);
+        } catch (Exception e) {
+            logger.warn("StringUtils parse number failed:" + s, e);
+            return null;
+        }
+    }
+
+    public static Double toDouble(String s) {
+        try {
+            return Double.parseDouble(s);
+        } catch (Exception e) {
+            logger.warn("StringUtils parse number failed:" + s, e);
+            return null;
+        }
+    }
+
+    public static Long toLong(String s) {
+        try {
+            return Long.parseLong(s);
+        } catch (Exception e) {
+            logger.warn("StringUtils parse number failed:" + s, e);
+            return null;
+        }
     }
 
     public static boolean isEmpty(String text) {

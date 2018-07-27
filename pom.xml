@@ -76,8 +76,7 @@
         <module>consumer</module>
         <module>zuulRoute</module>
         <module>cloud-app</module>
-      <module>hpdc</module>
-        <module>javaSampleTest</module>
+        <module>hpdc</module>
     </modules>
 
     <dependencyManagement>

@@ -7,8 +7,10 @@ import java.util.Properties
 import com.collie.bgEra.cloudApp.dtsf.bean.{TargetInfo, TaskInfo, WorkUnitInfo, ZkSessionInfo}
 import com.collie.bgEra.cloudApp.dtsf.conf.DtsfConf
 import com.collie.bgEra.cloudApp.kryoUtil.KryoUtil
+import com.collie.bgEra.cloudApp.redisCache.conf.RedisCacheConf
 import com.collie.bgEra.cloudApp.utils.ContextHolder
 import com.collie.bgEra.commons.util.CommonUtils
+import com.collie.bgEra.hpdc.service.bean.CalculateIncacheStatsValue
 import com.collie.bgEra.hpdc.workUnit.bean.{CpuStats, HostNetStats, MemStats}
 import org.apache.kafka.clients.producer.KafkaProducer
 import org.springframework.boot.SpringApplication
@@ -26,7 +28,7 @@ import scala.collection.JavaConversions._
 import scala.util.control.Breaks._
 
 @EnableAutoConfiguration(exclude = Array(classOf[HibernateJpaAutoConfiguration], classOf[DataSourceTransactionManagerAutoConfiguration], classOf[DataSourceAutoConfiguration]))
-@Import(Array(classOf[DtsfConf]))
+@Import(Array(classOf[DtsfConf], classOf[RedisCacheConf]))
 @SpringBootApplication(scanBasePackages = Array("com.collie.bgEra.hpdc"), scanBasePackageClasses = Array(classOf[ContextHolder]))
 class Config extends WebMvcConfigurationSupport {
 
@@ -36,10 +38,11 @@ class Config extends WebMvcConfigurationSupport {
 
   private def init(): Unit = {
     logger.info("init Application HPDC, add class to kryo.")
-    val map: java.util.Map[Integer,Class[_]] = new util.HashMap()
-    map.put(10001,classOf[CpuStats])
-    map.put(10002,classOf[HostNetStats])
-    map.put(10003,classOf[MemStats])
+    val map: java.util.Map[Integer, Class[_]] = new util.HashMap()
+    map.put(10001, classOf[CpuStats])
+    map.put(10002, classOf[HostNetStats])
+    map.put(10003, classOf[MemStats])
+    map.put(10004, classOf[CalculateIncacheStatsValue[_]])
     KryoUtil.addCustomClassRegMap(map)
   }
 
@@ -86,19 +89,19 @@ class Config extends WebMvcConfigurationSupport {
   @Bean(Array("hpdcProducer"))
   def getKafkaProducer(): KafkaProducer[String, Object] = {
     val producerProp = new Properties()
-    producerProp.setProperty(ProducerConfig.ACKS_CONFIG,"1")
-    producerProp.setProperty(ProducerConfig.RETRIES_CONFIG,"1")
-    producerProp.setProperty(ProducerConfig.BATCH_SIZE_CONFIG,"16384")
-    producerProp.setProperty(ProducerConfig.LINGER_MS_CONFIG,"1000")
-    producerProp.setProperty(ProducerConfig.COMPRESSION_TYPE_CONFIG,"snappy")
-    producerProp.setProperty(ProducerConfig.BUFFER_MEMORY_CONFIG,"100663296")
-    producerProp.setProperty(ProducerConfig.MAX_REQUEST_SIZE_CONFIG,"1073741824")
-    producerProp.setProperty(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG,"com.collie.bgEra.hpdc.kafka.serializers.ObjectSerializer")
-    producerProp.setProperty(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG,"com.collie.bgEra.hpdc.kafka.serializers.ObjectSerializer")
+    producerProp.setProperty(ProducerConfig.ACKS_CONFIG, "1")
+    producerProp.setProperty(ProducerConfig.RETRIES_CONFIG, "1")
+    producerProp.setProperty(ProducerConfig.BATCH_SIZE_CONFIG, "16384")
+    producerProp.setProperty(ProducerConfig.LINGER_MS_CONFIG, "1000")
+    producerProp.setProperty(ProducerConfig.COMPRESSION_TYPE_CONFIG, "snappy")
+    producerProp.setProperty(ProducerConfig.BUFFER_MEMORY_CONFIG, "100663296")
+    producerProp.setProperty(ProducerConfig.MAX_REQUEST_SIZE_CONFIG, "1073741824")
+    producerProp.setProperty(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, "com.collie.bgEra.hpdc.kafka.serializers.ObjectSerializer")
+    producerProp.setProperty(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, "com.collie.bgEra.hpdc.kafka.serializers.ObjectSerializer")
     val customProp = CommonUtils.readPropertiesFile("hpdcKafkaProducer.properties")
 
-    customProp.foreach(p => producerProp.setProperty(p._1,p._2))
-    new KafkaProducer[String,Object](producerProp)
+    customProp.foreach(p => producerProp.setProperty(p._1, p._2))
+    new KafkaProducer[String, Object](producerProp)
   }
 }
 
