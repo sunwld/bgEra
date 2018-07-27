@@ -106,11 +106,11 @@ class DtsfConf extends SchedulingConfigurer{
       val res = resolver.getResource(mybatisConfXmlPath)
       sqlSessionFactoryBean.setConfigLocation(res)
     }
-    resourceManager.putSqlSessionFactoy("dtsfMain", sqlSessionFactoryBean.getObject())
+    resourceManager.putSqlSessionFactoy("dtsfMain", dataSource,sqlSessionFactoryBean.getObject())
     sqlSessionFactoryBean
   }
 
-  @Bean(name = Array("mainJobDetail"))
+  @Bean(name = Array("dtsfMainJobDetail"))
   def jobDetail(@Qualifier("distributedTaskBus") bus: DistributedTaskBus): MethodInvokingJobDetailFactoryBean = {
     val jobDetailFactoryBean: MethodInvokingJobDetailFactoryBean = new MethodInvokingJobDetailFactoryBean()
     jobDetailFactoryBean.setConcurrent(false)
@@ -121,8 +121,8 @@ class DtsfConf extends SchedulingConfigurer{
     jobDetailFactoryBean
   }
 
-  @Bean(name = Array("mainTrigger"))
-  def mainJobTrigger(@Qualifier("mainJobDetail") mainJobDetail: MethodInvokingJobDetailFactoryBean): CronTriggerFactoryBean = {
+  @Bean(name = Array("dtsfMainTrigger"))
+  def mainJobTrigger(@Qualifier("dtsfMainJobDetail") mainJobDetail: MethodInvokingJobDetailFactoryBean): CronTriggerFactoryBean = {
     val trigger = new CronTriggerFactoryBean()
     trigger.setJobDetail(mainJobDetail.getObject)
     trigger.setCronExpression("0/2 * * * * ?")
@@ -131,8 +131,8 @@ class DtsfConf extends SchedulingConfigurer{
     trigger
   }
 
-  @Bean(Array("mainScheduler"))
-  def mainScheduler(@Qualifier("mainTrigger") mainTrigger: CronTriggerFactoryBean): SchedulerFactoryBean = {
+  @Bean(Array("dtsfMainScheduler"))
+  def mainScheduler(@Qualifier("dtsfMainTrigger") mainTrigger: CronTriggerFactoryBean): SchedulerFactoryBean = {
     val scheduler = new SchedulerFactoryBean()
     scheduler.setTriggers(mainTrigger.getObject())
     scheduler.setAutoStartup(false)

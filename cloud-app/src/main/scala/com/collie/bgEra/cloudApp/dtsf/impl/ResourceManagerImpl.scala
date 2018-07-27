@@ -1,8 +1,8 @@
 package com.collie.bgEra.cloudApp.dtsf.impl
 
-import java.util.Properties
 
-import com.collie.bgEra.cloudApp.dtsf.{ResourceManager, TaskManager}
+
+import com.collie.bgEra.cloudApp.dtsf.ResourceManager
 import com.collie.bgEra.cloudApp.dtsf.bean.{JmxConnPoolResource, ResourceType}
 import org.springframework.stereotype.Component
 import com.alibaba.druid.util.Utils.getBoolean
@@ -18,7 +18,6 @@ import org.mybatis.spring.SqlSessionFactoryBean
 import org.springframework.beans.factory.annotation.{Autowired, Qualifier}
 import org.springframework.context.annotation.Lazy
 import com.collie.bgEra.cloudApp.ssh2Pool.{Ssh2Session, Ssh2SessionPool, SshConnFactory}
-import org.apache.commons.pool2.impl.GenericObjectPool
 import org.apache.commons.pool2.impl.GenericObjectPoolConfig
 import org.springframework.core.io.support.PathMatchingResourcePatternResolver
 
@@ -29,28 +28,29 @@ class ResourceManagerImpl extends ResourceManager{
   private val taskMapper: TaskMapper = null
   @Autowired
   @Qualifier("cloudAppProps")
-  private val props: Properties = null
+  private val props: ju.Properties = null
   @Autowired
   private val cloudAppContext: CloudAppContext = null
 
-  private val dbSqlSessionFactoyMap: java.util.Map[String,SqlSessionFactory] = new java.util.HashMap()
+//  private val dbSqlSessionFactoyMap: java.util.Map[String,SqlSessionFactory] = new java.util.HashMap()
+  private val dbSqlSessionFactoyMap: java.util.Map[String,(SqlSessionFactory,DruidDataSource)] = new java.util.HashMap()
 
 
   override def getDataSourceResource(targetId: String): SqlSessionFactory = {
-    var factory = dbSqlSessionFactoyMap.get(targetId)
-    if(factory == null){
+    var tup2 = dbSqlSessionFactoyMap.get(targetId)
+    if(tup2 == null){
       dbSqlSessionFactoyMap.synchronized{
-        factory = dbSqlSessionFactoyMap.get(targetId)
-        if(factory == null){
-          factory = initDataSourceResource(targetId)
-          dbSqlSessionFactoyMap.put(targetId,factory)
+        tup2 = dbSqlSessionFactoyMap.get(targetId)
+        if(tup2 == null){
+          tup2 = initDataSourceResource(targetId)
+          dbSqlSessionFactoyMap.put(targetId,tup2)
         }
       }
     }
-    factory
+    tup2._1
   }
 
-  override def initDataSourceResource(targetId: String): SqlSessionFactory = {
+  override def initDataSourceResource(targetId: String): (SqlSessionFactory,DruidDataSource) = {
     val defaultProp = cloudAppContext.getDefaultDruidProp()
     val dataSource = new DruidDataSource()
     val sqlSessionFactoryBean = new SqlSessionFactoryBean()
@@ -77,13 +77,27 @@ class ResourceManagerImpl extends ResourceManager{
       val res = resolver.getResource(mybatisConfXmlPath)
       sqlSessionFactoryBean.setConfigLocation(res)
     }
-    sqlSessionFactoryBean.getObject()
+    (sqlSessionFactoryBean.getObject(),dataSource)
   }
 
-  def putSqlSessionFactoy(name: String,factory: SqlSessionFactory) = {
-    dbSqlSessionFactoyMap.put(name,factory)
+  override def putSqlSessionFactoy(name: String,ds:DruidDataSource,factory: SqlSessionFactory): Unit = {
+    dbSqlSessionFactoyMap.put(name,(factory,ds))
   }
 
+  override def flushAllDataSourceResource(): Unit = {
+    dbSqlSessionFactoyMap.synchronized{
+      val it: ju.Iterator[ju.Map.Entry[String, (SqlSessionFactory, DruidDataSource)]] = dbSqlSessionFactoyMap.entrySet().iterator()
+      while(it.hasNext()){
+        val entry: ju.Map.Entry[String, (SqlSessionFactory, DruidDataSource)] = it.next()
+        val name = entry.getKey()
+        val value = entry.getValue()
+        if(!"dtsfMain".equals(name) && value._2.getActiveCount() == 0){
+          value._2.close()
+          it.remove()
+        }
+      }
+    }
+  }
 
   private val ssh2ConnPoolsMap: java.util.Map[String,Ssh2SessionPool] = new ju.HashMap()
   override def getHostSshConnPoolResource(targetId: String): Ssh2Session = {
@@ -122,7 +136,27 @@ class ResourceManagerImpl extends ResourceManager{
     pool
   }
 
-  override def getJmxConnPoolResource(targetId: String): JmxConnPoolResource = ???
+  override def flushAllHostSshConnPoolResource(): Unit = {
+    ssh2ConnPoolsMap.synchronized{
+      val it: ju.Iterator[ju.Map.Entry[String, Ssh2SessionPool]] = ssh2ConnPoolsMap.entrySet().iterator()
+      while(it.hasNext()){
+        val pool: Ssh2SessionPool = it.next().getValue()
+          if(pool.getNumActive() == 0){
+            pool.close()
+            it.remove()
+          }
+      }
+    }
+  }
 
-  override def initJmxConnPoolResource(resourceContext: Properties): Unit = ???
+  override def getJmxConnPoolResource(targetId: String): JmxConnPoolResource = {
+    null
+  }
+
+  override def initJmxConnPoolResource(resourceContext: ju.Properties): Unit = {
+  }
+
+  override def flushAllJmxConnPoolResource(): Unit = {
+
+  }
 }

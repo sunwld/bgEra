@@ -110,9 +110,9 @@ class ZApplicationManager private(
       watchStatusNode()
       watchClusterVersion()
 
-      if (getClusterStatus().equals("ACTIVE")) {
-        appResume()
-      }
+//      if (getClusterStatus().equals("ACTIVE")) {
+//        appResume()
+//      }
 
       this.clusterInfo.currentVotid
     } catch {
@@ -255,7 +255,7 @@ class ZApplicationManager private(
       try {
         appManagerStandardSkill.resume(clusterInfo)
       } catch {
-        case ex: Exception => throw new AppClusterFatalException("")
+        case ex: Exception => throw new AppClusterFatalException("",ex)
       }
     }
   }

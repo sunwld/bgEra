@@ -11,8 +11,8 @@ class Ct {
 
 
     @RequestMapping(Array("/q"))
-    def scheduler: Any = {
+    def scheduler = {
 
-        "success"
+        new Tuple2(1,"String")
     }
 }

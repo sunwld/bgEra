@@ -3,7 +3,7 @@ package com.collie.bgEra.cloudApp.dtsf.impl
 import java.util
 
 import com.collie.bgEra.cloudApp.appm.ClusterInfo
-import com.collie.bgEra.cloudApp.dtsf.ShardingManager
+import com.collie.bgEra.cloudApp.dtsf.{ResourceManager, ShardingManager}
 import com.collie.bgEra.cloudApp.dtsf.bean.{ShardingTarget, TargetInfo, ZkSessionInfo}
 import com.collie.bgEra.cloudApp.dtsf.mapper.TaskMapper
 import com.collie.bgEra.cloudApp.redisCache.RedisService
@@ -18,6 +18,9 @@ import scala.collection.JavaConversions._
 class ShardingManagerImpl extends ShardingManager{
   @Autowired
   private val taskMapper: TaskMapper = null
+
+  @Autowired
+  private val resManager: ResourceManager = null
 
   override def generateCurrentInstanceId: Long = ???
 
@@ -56,10 +59,26 @@ class ShardingManagerImpl extends ShardingManager{
     taskMapper.insertZkSessionInfo(clusterInfoList)
   }
 
+  /**
+    * 清空dtsf 的redis 缓存
+    */
   override def flushCache(): Unit = {
     taskMapper.flushDtsfRedisCache()
   }
 
+  /**
+    * 初始化 dtsf的redis缓存
+    * @param clusterInfo
+    */
   override def initRedisCache(clusterInfo: ClusterInfo): Unit = {
+  }
+
+  /**
+    *释放 datasorece、ssh2、jmx等资源池
+    */
+  override def flustResource(): Unit = {
+    resManager.flushAllDataSourceResource()
+    resManager.flushAllHostSshConnPoolResource()
+    resManager.flushAllJmxConnPoolResource()
   }
 }
