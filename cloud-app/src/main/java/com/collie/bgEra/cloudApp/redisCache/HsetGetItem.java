@@ -1,5 +1,8 @@
 package com.collie.bgEra.cloudApp.redisCache;
 
+import org.springframework.core.Ordered;
+import org.springframework.core.annotation.Order;
+
 import java.lang.annotation.*;
 
 /**
@@ -9,7 +12,10 @@ import java.lang.annotation.*;
 @Target({ElementType.METHOD})
 @Retention(RetentionPolicy.RUNTIME)
 @Documented
+@Inherited
+@Order(Ordered.HIGHEST_PRECEDENCE)
 public @interface HsetGetItem {
-  String cacheKey();
-  String field();
+    String cacheKey();
+
+    String field();
 }

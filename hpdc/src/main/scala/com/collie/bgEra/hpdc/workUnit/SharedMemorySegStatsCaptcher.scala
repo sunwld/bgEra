@@ -1,71 +1,68 @@
 package com.collie.bgEra.hpdc.workUnit
 
+import java.util
+
 import com.collie.bgEra.cloudApp.dtsf.{ResourceManager, WorkUnitRunable}
 import com.collie.bgEra.cloudApp.dtsf.bean.WorkUnitInfo
 import com.collie.bgEra.cloudApp.ssh2Pool.{Ssh2Session, SshResult}
 import com.collie.bgEra.commons.util.{ArrayUtils, SerialNumberUtils, StringUtils}
-import com.collie.bgEra.hpdc.workUnit.bean.{SharedMemorySegStats}
+import com.collie.bgEra.hpdc.service.ShhShellMessgesService
+import com.collie.bgEra.hpdc.service.bean.ShellInfo
+import com.collie.bgEra.hpdc.workUnit.bean.SharedMemorySegStats
 import org.apache.kafka.clients.producer.{KafkaProducer, ProducerRecord}
 import org.slf4j.{Logger, LoggerFactory}
 import org.springframework.beans.factory.annotation.{Autowired, Qualifier}
+import org.springframework.stereotype.Component
 
 import scala.collection.mutable.ListBuffer
 import scala.collection.JavaConversions._
+import scala.collection.mutable
 
+@Component("sharedMemorySegStatsCaptcher")
 class SharedMemorySegStatsCaptcher extends WorkUnitRunable {
   private val TOPIC = "hpdc-sharedmem"
-  private val SHELL = "SHARED_MEM"
+  private val SHELL = "SHARED_MEM.xsh"
 
   private val logger: Logger = LoggerFactory.getLogger("hpdc")
-
   @Autowired
-  @Qualifier("hostShellMap")
-  private val shellMap: java.util.Map[String, String] = null
-
-  @Autowired
-  private val kfkProducer: KafkaProducer[String, SharedMemorySegStats] = null
-
-  @Autowired
-  private val resManager: ResourceManager = null
+  private val shhShellMessgesService: ShhShellMessgesService = null
 
   override def runWork(workUnitInfo: WorkUnitInfo): Unit = {
-
-    val cmd = shellMap.get(SHELL)
-    var session: Ssh2Session = null
-    var sshResult: SshResult = null
 
     var sharedMemorySegStats: SharedMemorySegStats = new SharedMemorySegStats()
     sharedMemorySegStats.snapId = SerialNumberUtils.getSerialByTrunc10s(workUnitInfo.thisTime, true)
     sharedMemorySegStats.targetId = workUnitInfo.targetId
 
     try {
-      session = resManager.getHostSshConnPoolResource(workUnitInfo.getTargetId())
-      sshResult = session.execCommand(cmd)
-
-      if (sshResult.isFinishAndCmdSuccess()) {
-        //OSTYPE:LINUX
-        //(shmid|ID,key|KEY,owner|OWNER,bytes|SEGSZ,cpid|CPID,lpid|LPID,attached|ATIME,detached|DTIME,changed|CTIME)
-        val statResults = ListBuffer[(Long, String, String, Long, Long, Long, String, String, String)]()
-        val osType = sshResult.getStrout().get(0).split(":")(1)
-
-        val parseResult: ListBuffer[(Long, String, String, Long, Long, Long, String, String, String, String)] = osType match {
-          case "LINUX" => parseLinuxResult(sshResult.getStrout())
-          case ost if ("AIX".equals(ost) || "SOLARIS".equals(ost)) => parseOtherResult(sshResult.getStrout())
-          case _ => null
-        }
-
-        sharedMemorySegStats.statsResult = parseResult
-        val record: ProducerRecord[String, SharedMemorySegStats] = new ProducerRecord(TOPIC, workUnitInfo.targetId, sharedMemorySegStats)
-        kfkProducer.send(record)
+      val sshResult = shhShellMessgesService.loadShellResults(new ShellInfo(SHELL, workUnitInfo.targetId, mutable.Map()))
+      if (sshResult == null || sshResult.isEmpty) {
+        return
       }
+
+      //OSTYPE:LINUX
+      //(shmid|ID,key|KEY,owner|OWNER,bytes|SEGSZ,cpid|CPID,lpid|LPID,attached|ATIME,detached|DTIME,changed|CTIME)
+      val statResults = ListBuffer[(Long, String, String, Long, Long, Long, String, String, String)]()
+      val osType = sshResult.get(0).split(":")(1)
+
+      val parseResult: ListBuffer[(Long, String, String, Long, Long, Long, String, String, String, String)] = osType match {
+        case "LINUX" => parseLinuxResult(sshResult)
+        case ost if ("AIX".equals(ost) || "SOLARIS".equals(ost)) => parseOtherResult(sshResult)
+        case _ => null
+      }
+
+      val javaList = new util.ArrayList[(Long, String, String, Long, Long, Long, String, String, String, String)]()
+      parseResult.foreach(javaList.append(_))
+
+      sharedMemorySegStats.statsResult = javaList
+
+      logger.debug(s"sharedMemorySegStatsCaptcher:${sharedMemorySegStats.toString()}")
+
+      val record: ProducerRecord[String, SharedMemorySegStats] = new ProducerRecord(TOPIC, workUnitInfo.targetId, sharedMemorySegStats)
+      shhShellMessgesService.sendRecord2Kafka(record, classOf[SharedMemorySegStats])
+
     } catch {
       case e: Exception => {
-        logger.warn(s"Captcher ShredMemorySegStats failed, shell result[${sshResult}]", e)
-      }
-    }
-    finally {
-      if (session != null) {
-        session.close()
+        logger.warn(s"Captcher ShredMemorySegStats failed.", e)
       }
     }
 
@@ -223,7 +220,7 @@ class SharedMemorySegStatsCaptcher extends WorkUnitRunable {
             val segStatKey = ArrayUtils.geti(lineItems, segStatKeyP)
             val segStatOwner = ArrayUtils.geti(lineItems, segStatOwnerP)
             val segStatSize = StringUtils.toLong(ArrayUtils.geti(lineItems, segStatSizeP))
-            val segStatStatus = ArrayUtils.geti(lineItems, segStatStatusP)
+            val segStatStatus = ArrayUtils.getiNE(lineItems, segStatStatusP)
             //(Long, String, String, Long, String): id,key,owner,size,status
             shareSegStats.append((segStatId, segStatKey, segStatOwner, segStatSize, segStatStatus))
           } else if (!shareSegStatsTitleRegx.findFirstIn(line).isEmpty) {

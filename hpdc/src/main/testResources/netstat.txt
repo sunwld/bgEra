@@ -1,0 +1,6 @@
+OSTYPE:LINUX
+Kernel Interface table
+Iface      MTU    RX-OK RX-ERR RX-DRP RX-OVR    TX-OK TX-ERR TX-DRP TX-OVR Flg
+eth0      1500 73538186      0      0 0      56463689      0      0      0 BMRU
+lo       65536     3551      0      0 0          3551      0      0      0 LRU
+virbr0    1500        0      0      0 0             0      0      0      0 BMU

@@ -11,7 +11,7 @@ import org.springframework.util.Assert
 
 
 @Configuration
-@ComponentScan(basePackages = Array("com.collie.bgEra.cloudApp.dsla"),basePackageClasses = Array(classOf[ContextHolder]))
+@ComponentScan(basePackages = Array("com.collie.bgEra.cloudApp.dsla"), basePackageClasses = Array(classOf[ContextHolder]))
 @Import(Array(classOf[ContextConf]))
 @EnableAspectJAutoProxy
 class DslaConf {
@@ -19,19 +19,19 @@ class DslaConf {
   @Qualifier("cloudAppProps")
   private val props: Properties = null
 
-  @Bean(name = Array("distributedServiceLatchArbitrator"))
-  def getDistributedServiceLatchArbitrator: DistributedServiceLatchArbitrator = {
-    val projectName = props.getProperty("projectName")
-    Assert.hasText(projectName,"projectName must not be empty")
-    DistributedServiceLatchArbitrator(projectName).initZookeeperForDSA()
-    DistributedServiceLatchArbitrator()
-  }
-
   @Bean(name = Array("dslaZkSession"))
   def getZkDriver(): ZookeeperSession = {
     val zkUrl = props.getProperty("dsla.zkUrl")
-    Assert.hasText(zkUrl,"dsla.zkUrl must not be empty")
+    Assert.hasText(zkUrl, "dsla.zkUrl must not be empty")
     ZookeeperSession(zkUrl)
+  }
+
+  @Bean(name = Array("distributedServiceLatchArbitrator"))
+  def getDistributedServiceLatchArbitrator(@Qualifier("dslaZkSession") zkSession: ZookeeperSession): DistributedServiceLatchArbitrator = {
+    val projectName = props.getProperty("projectName")
+    Assert.hasText(projectName, "projectName must not be empty")
+    DistributedServiceLatchArbitrator(projectName).initZookeeperForDSA(zkSession)
+    DistributedServiceLatchArbitrator()
   }
 
 }

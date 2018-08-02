@@ -8,5 +8,9 @@ import scala.collection.mutable
   * @param statsVal   (statid,(snapid,snapval))
   */
 case class CalculateIncacheStatsValue[T](@BeanProperty var lastSnapId: String,
-                                         @BeanProperty var statsVal: mutable.Map[T, (String, Double)]) {
+                                         @BeanProperty var statsVal: java.util.Map[T, (String, Double)]) {
+
+  override def toString(): String = {
+    s"{lastSnapId:$lastSnapId,statsVal:${statsVal}}"
+  }
 }

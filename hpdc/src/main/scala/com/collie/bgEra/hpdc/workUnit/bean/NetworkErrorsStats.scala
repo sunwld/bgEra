@@ -9,7 +9,7 @@ class NetworkErrorsStats {
   @BeanProperty var targetId: String = _
   @BeanProperty var snapId: String = _
   //statid->(snapid,diffSeconds,diffVal)
-  @BeanProperty var statsResult:mutable.Map[String,(String,Long,Double)] = _
+  @BeanProperty var statsResult:java.util.Map[String,(String,Long,Double)] = _
 
-  override def toString = s"NetworkErrorsStats(targetId=$targetId, snapId=$snapId, statsResult=$statsResult)"
+  override def toString = s"NetworkErrorsStats(targetId=$targetId, snapId=$snapId, statsResult=${statsResult.toString()})"
 }

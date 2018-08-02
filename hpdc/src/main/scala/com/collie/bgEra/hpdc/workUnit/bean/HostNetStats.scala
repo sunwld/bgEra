@@ -6,8 +6,11 @@ import scala.collection.mutable
 class HostNetStats {
   @BeanProperty var targetId: String = _
   @BeanProperty var snapId: String = _
-  //name -> (name,snapid,mtu,ipks,ierrs,opks,oerrs)
-  @BeanProperty var statsResult: mutable.Map[String, (String, String, Int, Long, Long, Long, Long)] = _
+  //name -> (snapid,mtu,ipks,ierrs,opks,oerrs)
+  @BeanProperty var statsResult: java.util.Map[String, (String, Int, Long, Long, Long, Long)] = _
+
+
+  override def toString = s"HostNetStats(targetId=$targetId, snapId=$snapId, statsResult=${statsResult.toString()})"
 }
 
 object HostNetStats {

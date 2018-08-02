@@ -589,7 +589,7 @@ public class DateUtils extends org.apache.commons.lang3.time.DateUtils {
             try {
                 return format.parse(date);
             } catch (Exception ex) {
-                logger.error("run dateFormat failed:", ex);
+                logger.warn("[" + date + "]run dateFormat[" + dateFormat + "] failed.");
             }
         }
         return null;

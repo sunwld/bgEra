@@ -4,39 +4,33 @@ import com.collie.bgEra.cloudApp.dtsf.{ResourceManager, WorkUnitRunable}
 import com.collie.bgEra.cloudApp.dtsf.bean.WorkUnitInfo
 import com.collie.bgEra.cloudApp.ssh2Pool.{Ssh2Session, SshResult}
 import com.collie.bgEra.commons.util.{SerialNumberUtils, StringUtils}
-import com.collie.bgEra.hpdc.service.StatisticsCalculateIncacheService
-import com.collie.bgEra.hpdc.service.bean.CalculateIncacheStatsValue
-import com.collie.bgEra.hpdc.workUnit.bean.{ SwapIOStats}
+import com.collie.bgEra.hpdc.service.{ShhShellMessgesService, StatisticsCalculateIncacheService}
+import com.collie.bgEra.hpdc.service.bean.{CalculateIncacheStatsValue, ShellInfo}
+import com.collie.bgEra.hpdc.workUnit.bean.SwapIOStats
 import org.apache.kafka.clients.producer.{KafkaProducer, ProducerRecord}
 import org.slf4j.{Logger, LoggerFactory}
 import org.springframework.beans.factory.annotation.{Autowired, Qualifier}
+import org.springframework.stereotype.Component
 
 import scala.collection.JavaConversions._
 import scala.collection.mutable
 
+@Component("swapIOStatsCaptcher")
 class SwapIOStatsCaptcher extends WorkUnitRunable {
   private val TOPIC = "hpdc-swapio"
-  private val SHELL = "SWAP_PAGESTAT"
-
+  private val SHELL = "SWAP_PAGESTAT.xsh"
 
   private val logger: Logger = LoggerFactory.getLogger("hpdc")
 
   @Autowired
-  @Qualifier("hostShellMap")
-  private val shellMap: java.util.Map[String, String] = null
-
-  @Autowired
-  private val kfkProducer: KafkaProducer[String, SwapIOStats] = null
-
-  @Autowired
-  private val resManager: ResourceManager = null
+  private val shhShellMessgesService: ShhShellMessgesService = null
 
   /**
     * String1: network device name
     * String2: network stats name: Array(ipks, ierrs, opks, oerrs)
     */
   @Autowired
-  private val statisticsCalculateIncacheService: StatisticsCalculateIncacheService[String] = null
+  private val statisticsCalculateIncacheService: StatisticsCalculateIncacheService = null
 
   override def runWork(workUnitInfo: WorkUnitInfo): Unit = {
     /**
@@ -57,51 +51,52 @@ class SwapIOStatsCaptcher extends WorkUnitRunable {
       * 0 pages swapped out
       */
 
-    val cmd = shellMap.get(SHELL)
-    var session: Ssh2Session = null
-    var sshResult: SshResult = null
-
 
     try {
-      session = resManager.getHostSshConnPoolResource(workUnitInfo.getTargetId())
-      sshResult = session.execCommand(cmd)
+      val sshResult = shhShellMessgesService.loadShellResults(new ShellInfo(SHELL, workUnitInfo.targetId, mutable.Map()))
+      if (sshResult == null || sshResult.isEmpty) {
+        return
+      }
+
       val snapId = SerialNumberUtils.getSerialByTrunc10s(workUnitInfo.thisTime, true)
+      val swapInRegx = "^(\\d+)\\s+.*\\s+in.*$".r
+      val swapOutRegx = "^(\\d+)\\s+.*\\s+out.*$".r
 
-      if (sshResult.isFinishAndCmdSuccess()) {
-        val swapInRegx = "^(\\d+)\\s+.*\\s+in.*$".r
-        val swapOutRegx = "^(\\d+)\\s+.*\\s+out.*$".r
+      var inV, outV = 0D
 
-        var inV, outV = 0D
+      sshResult.foreach(line => {
+        line match {
+          case swapInRegx(c) => inV = StringUtils.toDouble(c)
+          case swapOutRegx(c) => outV = StringUtils.toDouble(c)
+          case _ => {}
+        }
+      })
 
-        sshResult.getStrout().foreach(line => {
-          line match {
-            case swapInRegx(c) => inV = StringUtils.toDouble(c)
-            case swapOutRegx(c) => outV = StringUtils.toDouble(c)
-            case _ => {}
-          }
-        })
+      val serableJavaData = new java.util.HashMap[String, (String, Double)]()
+      serableJavaData.put(SwapIOStats.swapIn, (snapId, inV))
+      serableJavaData.put(SwapIOStats.swapOut, (snapId, outV))
+      val calculateIncacheStatsValue: CalculateIncacheStatsValue[String] = new CalculateIncacheStatsValue(
+        snapId, serableJavaData)
 
-        val calculateIncacheStatsValue: CalculateIncacheStatsValue[String] = new CalculateIncacheStatsValue(
-          snapId, mutable.HashMap[String, (String, Double)](SwapIOStats.swapIn -> (snapId, inV),
-            SwapIOStats.swapOut -> (snapId, outV)))
+      val swapIOStats: SwapIOStats = new SwapIOStats()
+      swapIOStats.snapId = snapId
+      swapIOStats.targetId = workUnitInfo.targetId
 
-        val caledValMap = statisticsCalculateIncacheService.calculateDiff2LastValue(SHELL, workUnitInfo.targetId, calculateIncacheStatsValue)
+      val caledValMap = statisticsCalculateIncacheService.calculateDiff2LastValue(SHELL, workUnitInfo.targetId, calculateIncacheStatsValue)
+      if (!caledValMap.isEmpty()) {
 
-        val swapIOStats: SwapIOStats = new SwapIOStats()
-        swapIOStats.snapId = snapId
-        swapIOStats.targetId = workUnitInfo.targetId
-        swapIOStats.statsResult = (workUnitInfo.targetId, snapId, caledValMap(SwapIOStats.swapIn)._3, caledValMap(SwapIOStats.swapOut)._3)
+        swapIOStats.statsResult = (caledValMap.getOrElse(SwapIOStats.swapIn, null)._3, caledValMap(SwapIOStats.swapOut)._3)
 
         val record: ProducerRecord[String, SwapIOStats] = new ProducerRecord(TOPIC, workUnitInfo.targetId, swapIOStats)
-        kfkProducer.send(record)
+        shhShellMessgesService.sendRecord2Kafka(record, classOf[SwapIOStats])
       }
+
+      logger.debug(s"swapIOStatsCaptcher:${swapIOStats.toString()}")
+
+
     } catch {
       case e: Exception => {
-        logger.warn(s"Captcher NetworkStats failed, shell result[${sshResult}]", e)
-      }
-    } finally {
-      if (session != null) {
-        session.close()
+        logger.warn(s"Captcher NetworkStats failed.", e)
       }
     }
 

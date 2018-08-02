@@ -1,33 +1,32 @@
 package com.collie.bgEra.hpdc.workUnit
 
+import java.util
+
 import com.collie.bgEra.cloudApp.dtsf.{ResourceManager, WorkUnitRunable}
 import com.collie.bgEra.cloudApp.dtsf.bean.WorkUnitInfo
 import com.collie.bgEra.cloudApp.ssh2Pool.{Ssh2Session, SshResult}
 import com.collie.bgEra.commons.util.{ArrayUtils, SerialNumberUtils, StringUtils}
+import com.collie.bgEra.hpdc.service.ShhShellMessgesService
+import com.collie.bgEra.hpdc.service.bean.ShellInfo
 import com.collie.bgEra.hpdc.workUnit.bean.{CpuProcessorStats, ProcessListStats}
 import org.apache.kafka.clients.producer.{KafkaProducer, ProducerRecord}
 import org.slf4j.{Logger, LoggerFactory}
 import org.springframework.beans.factory.annotation.{Autowired, Qualifier}
+import org.springframework.stereotype.Component
 
 import scala.collection.JavaConversions._
+import scala.collection.mutable
 import scala.collection.mutable.ListBuffer
 
+@Component("processListStatsCaptcher")
 class ProcessListStatsCaptcher extends WorkUnitRunable {
   private val TOPIC = "hpdc-processlist"
-  private val SHELL = "PROCESS_LIST"
+  private val SHELL = "PROCESS_LIST.xsh"
 
   private val logger: Logger = LoggerFactory.getLogger("hpdc")
 
   @Autowired
-  @Qualifier("hostShellMap")
-  private val shellMap: java.util.Map[String, String] = null
-
-  @Autowired
-  private val kfkProducer: KafkaProducer[String, ProcessListStats] = null
-
-  @Autowired
-  private val resManager: ResourceManager = null
-
+  private val shhShellMessgesService: ShhShellMessgesService = null
   /**
     * OSTYPE:LINUX
     * S   UID   PID  PPID  C PRI  NI   RSS    SZ WCHAN  TTY          TIME CMD
@@ -117,87 +116,66 @@ class ProcessListStatsCaptcher extends WorkUnitRunable {
     */
 
   override def runWork(workUnitInfo: WorkUnitInfo): Unit = {
-    val cmd = shellMap.get(SHELL)
-    var session: Ssh2Session = null
-    var sshResult: SshResult = null
 
     var processListStats: ProcessListStats = new ProcessListStats()
     processListStats.snapId = SerialNumberUtils.getSerialByTrunc10s(workUnitInfo.thisTime, true)
     processListStats.targetId = workUnitInfo.targetId
 
     try {
-      session = resManager.getHostSshConnPoolResource(workUnitInfo.getTargetId())
-      sshResult = session.execCommand(cmd)
-
-      if (sshResult.isFinishAndCmdSuccess()) {
-        //OSTYPE:LINUX
-        //(PID,S,PRI,NI,WCHAN,TTY,TIME,cmd,C,RSS[LINUX]|SZ[SOLARIS|AIX])
-        var statsList: ListBuffer[(Int, String, String, String, String, String, String, String, Float, Long)] = null
-        val osType = sshResult.getStrout().get(0).split(":")(1)
-
-        val splitPattern = "\\s".r
-        val titlePattern = "PID\\s+PPID".r
-
-        var SP,PIDP,RPIP,NIP,WCHANP,TTYP,TIMEP,CMDP,CP,SIZEP,PRIP = -1
-        sshResult.getStrout.foreach(line => {
-          val items = splitPattern.split(line)
-
-          for (i <- 0 until items.length) {
-            if (titlePattern.findFirstIn(line).isEmpty) {
-              //S     0     1     0  0  80   0  5084 48023 ep_pol ?        00:03:40 systemd
-              val S = ArrayUtils.geti(items, SP)
-              val PID = StringUtils.toInt(ArrayUtils.geti(items, PIDP))
-              val PRI = ArrayUtils.geti(items, PRIP)
-              val NI = ArrayUtils.geti(items, NIP)
-              val WCHAN = ArrayUtils.geti(items, WCHANP)
-              val TTY = ArrayUtils.geti(items, TTYP)
-              val TIME = ArrayUtils.geti(items, TIMEP)
-              val CMD = ArrayUtils.geti(items, CMDP)
-              val C = StringUtils.toFloat(ArrayUtils.geti(items, CP))
-              val SIZE = StringUtils.toLong(ArrayUtils.geti(items, SIZEP))
-              //(PID,S,PRI,NI,WCHAN,TTY,TIME,cmd,C,RSS[LINUX]|SZ[SOLARIS|AIX])
-              statsList.append((PID, S, PRI, NI, WCHAN, TTY, TIME, CMD, C, SIZE))
-            } else {
-              //S   UID   PID  PPID  C PRI  NI   RSS    SZ WCHAN  TTY          TIME CMD
-              if (items(i) == "S" || items(i) == "s") {
-                SP = i
-              } else if (items(i) == "PID" || items(i) == "pid") {
-                PIDP = i
-              } else if (items(i) == "PRI" || items(i) == "pri") {
-                PRIP = i
-              } else if (items(i) == "NI" || items(i) == "ni") {
-                NIP = i
-              } else if (items(i) == "WCHAN" || items(i) == "wchanp") {
-                WCHANP = i
-              } else if (items(i) == "TTY" || items(i) == "tty") {
-                TTYP = i
-              } else if (items(i) == "TIME" || items(i) == "time") {
-                TIMEP = i
-              } else if (items(i) == "CMD" || items(i) == "cmd") {
-                CMDP = i
-              } else if (items(i) == "C" || items(i) == "c") {
-                CP = i
-              } else if ((items(i) == "RSS" || items(i) == "rss") || osType == "LINUX") {
-                SIZEP = i
-              } else if ((items(i) == "SZ" || items(i) == "sz") || osType != "LINUX") {
-                SIZEP = i
-              }
-            }
-          }
-        })
-
-        val record: ProducerRecord[String, ProcessListStats] = new ProducerRecord(TOPIC, workUnitInfo.targetId, processListStats)
-        kfkProducer.send(record)
+      val sshResult = shhShellMessgesService.loadShellResults(new ShellInfo(SHELL, workUnitInfo.targetId, mutable.Map()))
+      if (sshResult == null || sshResult.isEmpty) {
+        return
       }
+
+      //OSTYPE:LINUX
+      //(PID,S,PRI,NI,WCHAN,TTY,TIME,cmd,C,RSS[LINUX]|SZ[SOLARIS|AIX])
+      var statsList: java.util.List[(Long, String, String, String, String, String, String, String, Float, Long)] = new java.util.ArrayList()
+      val osType = sshResult.get(0).split(":")(1)
+
+      val splitRegex = "\\s+".r
+      val titleRegex = "^.*PID\\s+PPID\\s+.*$".r
+      val dataRegex = "^.*\\s+\\d+\\s+.*$".r
+      val footRegex = "^end$".r
+
+      val titleNamesRegex = ListBuffer((ProcessListStats.pid, "^PID$".r), (ProcessListStats.cpu, "^C$".r),
+        (ProcessListStats.pri, "^PRI$".r), (ProcessListStats.ni, "^NI$".r), (ProcessListStats.stat, "^S$".r),
+        (ProcessListStats.tty, "^TTY".r), (ProcessListStats.time, "^TIME$".r), (ProcessListStats.wchan, "^WCHAN$".r),
+        (ProcessListStats.ppid, "^PPID$".r), (ProcessListStats.sz, "^SZ$".r), (ProcessListStats.rss, "^RSS$".r))
+
+      val formatedData = shhShellMessgesService.formatColumedMessages2Map(sshResult, titleRegex, footRegex, dataRegex, splitRegex, titleNamesRegex)
+
+      //(PID,PPID,S,PRI,NI,WCHAN,TTY,TIME,cmd,C,RSS,SZ)
+      val serableJavaList = new util.ArrayList[(Long, Long, String, String, String, String, String, String, String, Float, Long, Long)]
+
+      var pid, ppid, rss, sz: Long = -1
+      var stat, pri, ni, wchan, tty, time, cmd: String = null
+      var cpu: Float = -1
+      formatedData.foreach(fm => {
+        pid = StringUtils.toLong(fm(ProcessListStats.pid))
+        ppid = StringUtils.toLong(fm.getOrElse(ProcessListStats.ppid, null))
+        rss = StringUtils.toLong(fm.getOrElse(ProcessListStats.rss, null))
+        sz = StringUtils.toLong(fm.getOrElse(ProcessListStats.sz, null))
+        stat = fm.getOrElse(ProcessListStats.stat, null)
+        pri = fm.getOrElse(ProcessListStats.pri, null)
+        ni = fm.getOrElse(ProcessListStats.ni, null)
+        wchan = fm.getOrElse(ProcessListStats.wchan, null)
+        tty = fm.getOrElse(ProcessListStats.tty, null)
+        time = fm.getOrElse(ProcessListStats.time, null)
+        cmd = fm.getOrElse(ProcessListStats.cmd, null)
+        cpu = StringUtils.toFloat(fm.getOrElse(ProcessListStats.cpu, null))
+        serableJavaList.add((pid, ppid, stat, pri, ni, wchan, tty, time, cmd, cpu, rss, sz))
+      })
+
+      processListStats.statsResult = serableJavaList
+      logger.debug(s"processListStatsCaptcher:${processListStats.toString()}")
+
+      val record: ProducerRecord[String, ProcessListStats] = new ProducerRecord(TOPIC, workUnitInfo.targetId, processListStats)
+      shhShellMessgesService.sendRecord2Kafka(record, classOf[ProcessListStats])
+
     }
     catch {
       case e: Exception => {
-        logger.warn(s"Captcher cpusum failed, shell result[${sshResult}]", e)
-      }
-    }
-    finally {
-      if (session != null) {
-        session.close()
+        logger.warn(s"Captcher cpusum failed.", e)
       }
     }
 

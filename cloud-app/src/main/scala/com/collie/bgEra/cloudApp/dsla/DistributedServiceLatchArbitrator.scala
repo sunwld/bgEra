@@ -16,8 +16,7 @@ class DistributedServiceLatchArbitrator private(val projectName: String) {
 
   private var zkSession: ZookeeperSession = null
 
-  def initZookeeperForDSA(): Unit = {
-    zkSession = ContextHolder.getBean("dslaZkSession")
+  def initZookeeperForDSA(zkSession: ZookeeperSession): Unit = {
     zkSession.createNode(rootPath, "", CreateMode.PERSISTENT)
     zkSession.createNode(latchPath, "", CreateMode.PERSISTENT)
   }

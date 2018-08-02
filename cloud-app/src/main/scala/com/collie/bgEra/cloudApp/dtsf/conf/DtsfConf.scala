@@ -86,13 +86,12 @@ class DtsfConf extends SchedulingConfigurer{
 
     val dataSource = new DruidDataSource()
     dataSource.setDefaultAutoCommit(false)
-    dataSource.setMaxWait(30000)
-    dataSource.setValidationQueryTimeout(3)
     dataSource.setRemoveAbandoned(true)
     dataSource.setRemoveAbandonedTimeout(180)
     dataSource.setLogAbandoned(true)
     val slf4jLogFilter = new com.alibaba.druid.filter.logging.Slf4jLogFilter()
     slf4jLogFilter.setStatementExecutableSqlLogEnable(false)
+
     dataSource.setProxyFilters(java.util.Arrays.asList(slf4jLogFilter))
     dataSource.configFromPropety(druidPros)
 

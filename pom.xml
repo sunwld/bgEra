@@ -30,6 +30,7 @@
         <commons-text.version>1.4</commons-text.version>
         <commons-pool2.version>2.4.3</commons-pool2.version>
         <commons-codec.version.version>1.10</commons-codec.version.version>
+        <commons-beanutils.version>1.9.3</commons-beanutils.version>
 
         <spring-cloud.version>Edgware.SR3</spring-cloud.version>
         <spring-boot_mybatis.version>1.3.2</spring-boot_mybatis.version>
@@ -49,6 +50,8 @@
         <spark_scala.version>2.11</spark_scala.version>
 
         <ch.ethz.ganymed.version>262</ch.ethz.ganymed.version>
+
+        <org.activiti.version>5.22.0</org.activiti.version>
 
         <!--maven插件-->
         <maven-jar-plugin.version>3.1.0</maven-jar-plugin.version>
@@ -77,6 +80,7 @@
         <module>zuulRoute</module>
         <module>cloud-app</module>
         <module>hpdc</module>
+        <module>flexwf</module>
     </modules>
 
     <dependencyManagement>
@@ -207,7 +211,11 @@
                 <artifactId>commons-text</artifactId>
                 <version>${commons-text.version}</version>
             </dependency>
-
+            <dependency>
+                <groupId>commons-beanutils</groupId>
+                <artifactId>commons-beanutils</artifactId>
+                <version>${commons-beanutils.version}</version>
+            </dependency>
             <dependency>
                 <groupId>org.apache.commons</groupId>
                 <artifactId>commons-pool2</artifactId>
@@ -249,6 +257,18 @@
                 <version>${spark.version}</version>
             </dependency>
 
+            <!-- activity workflow -->
+            <dependency>
+                <groupId>org.activiti</groupId>
+                <artifactId>activiti-engine</artifactId>
+                <version>${org.activiti.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.activiti</groupId>
+                <artifactId>activiti-spring</artifactId>
+                <version>${org.activiti.version}</version>
+            </dependency>
+
         </dependencies>
     </dependencyManagement>
 
@@ -266,6 +286,9 @@
         </dependency>
 
     </dependencies>
+
+    <repositories>
+    </repositories>
 
     <build>
         <plugins>

@@ -2,38 +2,31 @@ package com.collie.bgEra.hpdc.workUnit
 
 import java.util
 
-import com.collie.bgEra.cloudApp.dtsf.{ResourceManager, WorkUnitRunable}
+import com.collie.bgEra.cloudApp.dtsf.{WorkUnitRunable}
 import com.collie.bgEra.cloudApp.dtsf.bean.WorkUnitInfo
-import com.collie.bgEra.cloudApp.ssh2Pool.{Ssh2Session, SshResult}
 import com.collie.bgEra.commons.util.SerialNumberUtils
-import com.collie.bgEra.hpdc.service.StatisticsCalculateIncacheService
-import com.collie.bgEra.hpdc.service.bean.CalculateIncacheStatsValue
-import com.collie.bgEra.hpdc.workUnit.bean.{HostNetStats, NetworkErrorsStats}
-import org.apache.kafka.clients.producer.{KafkaProducer, ProducerRecord}
+import com.collie.bgEra.hpdc.service.{ShhShellMessgesService, StatisticsCalculateIncacheService}
+import com.collie.bgEra.hpdc.service.bean.{CalculateIncacheStatsValue, ShellInfo}
+import com.collie.bgEra.hpdc.workUnit.bean.{NetworkErrorsStats}
+import org.apache.kafka.clients.producer.{ProducerRecord}
 import org.slf4j.{Logger, LoggerFactory}
-import org.springframework.beans.factory.annotation.{Autowired, Qualifier}
-
-import scala.collection.JavaConversions._
+import org.springframework.beans.factory.annotation.{Autowired}
+import org.springframework.stereotype.Component
 import scala.collection.mutable
 import scala.collection.mutable.ListBuffer
+import scala.collection.JavaConversions._
 
+@Component("networkErrorsStatsCaptcher")
 class NetworkErrorsStatsCaptcher extends WorkUnitRunable {
   private val TOPIC = "hpdc-neterrors"
-  private val SHELL = "NETWORK_ERRORS"
+  private val SHELL = "NETWORK_ERRORS.xsh"
   private val logger: Logger = LoggerFactory.getLogger("hpdc")
 
   @Autowired
-  @Qualifier("hostShellMap")
-  private val shellMap: java.util.Map[String, String] = null
+  private val statisticsCalculateIncacheService: StatisticsCalculateIncacheService = null
 
   @Autowired
-  private val kfkProducer: KafkaProducer[String, NetworkErrorsStats] = null
-
-  @Autowired
-  private val resManager: ResourceManager = null
-
-  @Autowired
-  private val statisticsCalculateIncacheService: StatisticsCalculateIncacheService[String] = null
+  private val shhShellMessgesService: ShhShellMessgesService = null
 
   override def runWork(workUnitInfo: WorkUnitInfo): Unit = {
     /*
@@ -41,43 +34,42 @@ class NetworkErrorsStatsCaptcher extends WorkUnitRunable {
       * solaris 关键字 Err Error Fail Drop Overflow Timeout
       */
 
-    val cmd = shellMap.get(SHELL)
-    var session: Ssh2Session = null
-    var sshResult: SshResult = null
     try {
-      session = resManager.getHostSshConnPoolResource(workUnitInfo.getTargetId())
-      sshResult = session.execCommand(cmd)
+      val sshResult = shhShellMessgesService.loadShellResults(new ShellInfo(SHELL, workUnitInfo.targetId, mutable.Map()))
+      if (sshResult == null || sshResult.isEmpty) {
+        return
+      }
 
       //      (statid,diffSeconds,diffVal)
       val networkErrorsStats: NetworkErrorsStats = new NetworkErrorsStats()
       networkErrorsStats.snapId = SerialNumberUtils.getSerialByTrunc10s(workUnitInfo.thisTime, true)
       networkErrorsStats.targetId = workUnitInfo.targetId
-      if (sshResult.isFinishAndCmdSuccess()) {
 
-        var statsList: ListBuffer[(String, Double)] = null
-        val osType = sshResult.getStrout().get(0).split(":")(1)
-        osType match {
-          case "LINUX" => statsList = parseLinuxResult(sshResult.getStrout())
-          case "AIX" => statsList = parseAixResult(sshResult.getStrout())
-          case "SOLARIS" => statsList = parseSolarisResult(sshResult.getStrout())
-        }
-        // map(statindex,(snapid, snapvalue))
-        val statsMap: mutable.Map[String, (String, Double)] = mutable.HashMap[String, (String, Double)]()
-        statsList.foreach(i => {
-          statsMap.put(i._1, (networkErrorsStats.snapId, i._2))
-        })
-        val calculateIncacheStatsValue: CalculateIncacheStatsValue[String] = new CalculateIncacheStatsValue(networkErrorsStats.snapId, statsMap)
+      var statsList: ListBuffer[(String, Double)] = null
+      val osType = sshResult.get(0).split(":")(1)
+      osType match {
+        case "LINUX" => statsList = parseLinuxResult(sshResult)
+        case "AIX" => statsList = parseAixResult(sshResult)
+        case "SOLARIS" => statsList = parseSolarisResult(sshResult)
+      }
+
+      // map(statindex,(snapid, snapvalue))
+      val statsMap: java.util.Map[String, (String, Double)] = new java.util.HashMap[String, (String, Double)]()
+      statsList.foreach(i => {
+        statsMap.put(i._1, (networkErrorsStats.snapId, i._2))
+      })
+      val calculateIncacheStatsValue: CalculateIncacheStatsValue[String] = new CalculateIncacheStatsValue(networkErrorsStats.snapId, statsMap)
+      if(!calculateIncacheStatsValue.statsVal.isEmpty()){
         networkErrorsStats.statsResult = statisticsCalculateIncacheService.calculateDiff2LastValue(SHELL, workUnitInfo.targetId, calculateIncacheStatsValue)
         val record: ProducerRecord[String, NetworkErrorsStats] = new ProducerRecord(TOPIC, workUnitInfo.targetId, networkErrorsStats)
-        kfkProducer.send(record)
+        shhShellMessgesService.sendRecord2Kafka(record, classOf[NetworkErrorsStats])
       }
+
+      logger.debug("networkErrorsStatsCaptcher"+networkErrorsStats.toString())
+
     } catch {
       case e: Exception => {
-        logger.warn(s"Captcher NetworkErrorsStats failed, shell result[${sshResult}]", e)
-      }
-    } finally {
-      if (session != null) {
-        session.close()
+        logger.warn(s"Captcher NetworkErrorsStats failed.", e)
       }
     }
   }
@@ -103,7 +95,7 @@ class NetworkErrorsStatsCaptcher extends WorkUnitRunable {
     val parseResult: ListBuffer[(String, Double)] = ListBuffer()
 
     val linuxDataParten = "^\\s+".r
-    val keywordsParten = "([eE]rr)|([fF]ail)|([dD]rop)|([tT]imeout)|([bB]ad)".r
+    val keywordsParten = "(?:[eE]rr|[fF]ail|[dD]rop|[tT]imeout|[bB]ad)".r
     val numHeadParten = "^\\d".r
     val numTailParten = "\\d$".r
 
@@ -168,7 +160,7 @@ class NetworkErrorsStatsCaptcher extends WorkUnitRunable {
     val parseResult: ListBuffer[(String, Double)] = ListBuffer()
 
     val dataParten = "^\\s+".r
-    val keywordsParten = "([eE]rr)|([fF]ail)|([dD]rop)|([tT]imeout)|([bB]ad)".r
+    val keywordsParten = "(?:[eE]rr|[fF]ail|[dD]rop|[tT]imeout|[bB]ad)".r
     val numHeadParten = "^\\d".r
     val numTailParten = "\\d$".r
 
@@ -315,7 +307,7 @@ class NetworkErrorsStatsCaptcher extends WorkUnitRunable {
     val parseResult: ListBuffer[(String, Double)] = ListBuffer()
 
     val dataParten = "(\\w+)\\s*=\\s*(\\d+)".r
-    val keywordsParten = "([eE]rr)|([fF]ail)|([dD]rop)|([tT]imeout)|([Oo]verflow)".r
+    val keywordsParten = "(?:[eE]rr|[fF]ail|[dD]rop|[tT]imeout|[Oo]verflow)".r
     val numHeadParten = "^\\d".r
     val numTailParten = "\\d$".r
 

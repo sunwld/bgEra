@@ -36,13 +36,13 @@ object KryoUtil {
 
 
   def addCustomClassRegMap(customClassMap: util.Map[Integer, Class[_]]): Unit = {
-    kryoCustomClassRegMap.synchronized{
-      if(customClassMap != null){
+    kryoCustomClassRegMap.synchronized {
+      if (customClassMap != null) {
         customClassMap.foreach(x => {
-          if (kryoCustomClassRegMap.containsKey(x._1)){
+          if (kryoCustomClassRegMap.containsKey(x._1)) {
             logger.warn(s"class register id [${x._1}] is allready exists, registed class[${kryoCustomClassRegMap.get(x._1)}], new class[${x._2}].")
           }
-          kryoCustomClassRegMap.put(x._1,x._2)
+          kryoCustomClassRegMap.put(x._1, x._2)
         })
       }
     }
@@ -67,7 +67,6 @@ object KryoUtil {
       kryo.getInstantiatorStrategy.asInstanceOf[Kryo.DefaultInstantiatorStrategy].setFallbackInstantiatorStrategy(new StdInstantiatorStrategy)
 
       //Regist class map to kryo, sample classes begin 101 to 150, app classes > 150
-      logger.info("Regist class of scala sample objects to kryo[101-130]. ")
       kryo.register(classOf[util.HashMap[_, _]], 101)
       kryo.register(classOf[util.ArrayList[_]], 102)
       kryo.register(classOf[ListBuffer[_]], 103)
@@ -88,12 +87,11 @@ object KryoUtil {
       //      kryo.register(classOf[Array[Long]], 117)
       //      kryo.register(classOf[Array[Double]], 118)
       //      kryo.register(classOf[Array[Any]], 119)
-//      kryo.register(classOf[Array[Any]], 119)
+      //      kryo.register(classOf[Array[Any]], 119)
       kryo.register(classOf[Array[_]], 120)
       //      kryo.register(classOf[Array[Byte]], 121)
       //      kryo.register(classOf[Array[Char]], 122)
       kryo.register(classOf[BigDecimal], 123)
-      logger.info("Regist class of java sample objects to kryo[130-150]. ")
       //      kryo.register(classOf[Array[lang.String]], 130)
       //      kryo.register(classOf[Array[lang.Integer]], 131)
       //      kryo.register(classOf[Array[lang.Float]], 132)
@@ -104,46 +102,45 @@ object KryoUtil {
       //      kryo.register(classOf[Array[StringBuffer]], 137)
       kryo.register(classOf[Date], 138)
       kryo.register(classOf[java.math.BigDecimal], 139)
-      kryo.register(classOf[util.Map[_,_]], 150)
-      kryo.register(classOf[util.HashMap[_,_]], 140)
+      kryo.register(classOf[util.Map[_, _]], 150)
+      kryo.register(classOf[util.HashMap[_, _]], 140)
       kryo.register(classOf[util.ArrayList[_]], 141)
       kryo.register(classOf[util.List[_]], 151)
       kryo.register(classOf[util.LinkedList[_]], 142)
       kryo.register(classOf[util.HashSet[_]], 143)
       kryo.register(classOf[util.TreeSet[_]], 144)
-      kryo.register(classOf[util.Hashtable[_,_]], 145)
-      kryo.register(classOf[ConcurrentHashMap[_,_]], 146)
+      kryo.register(classOf[util.Hashtable[_, _]], 145)
+      kryo.register(classOf[ConcurrentHashMap[_, _]], 146)
       kryo.register(classOf[Vector[_]], 148)
       kryo.register(classOf[SimpleDateFormat], 147)
       kryo.register(classOf[Object], 149)
       kryo.register(classOf[Tuple1[_]], 152)
-      kryo.register(classOf[Tuple2[_,_]], 153)
-      kryo.register(classOf[Tuple3[_,_,_]], 154)
-      kryo.register(classOf[Tuple4[_,_,_,_]], 155)
-      kryo.register(classOf[Tuple5[_,_,_,_,_]], 156)
-      kryo.register(classOf[Tuple6[_,_,_,_,_,_]], 157)
-      kryo.register(classOf[Tuple7[_,_,_,_,_,_,_]], 158)
-      kryo.register(classOf[Tuple8[_,_,_,_,_,_,_,_]], 159)
-      kryo.register(classOf[Tuple9[_,_,_,_,_,_,_,_,_]], 160)
-      kryo.register(classOf[Tuple10[_,_,_,_,_,_,_,_,_,_]], 161)
-      kryo.register(classOf[Tuple11[_,_,_,_,_,_,_,_,_,_,_]], 162)
-      kryo.register(classOf[Tuple12[_,_,_,_,_,_,_,_,_,_,_,_]], 163)
-      kryo.register(classOf[Tuple13[_,_,_,_,_,_,_,_,_,_,_,_,_]], 164)
-      kryo.register(classOf[Tuple14[_,_,_,_,_,_,_,_,_,_,_,_,_,_]], 165)
-      kryo.register(classOf[Tuple15[_,_,_,_,_,_,_,_,_,_,_,_,_,_,_]], 166)
-      kryo.register(classOf[Tuple16[_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_]], 167)
-      kryo.register(classOf[Tuple17[_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_]], 168)
-      kryo.register(classOf[Tuple18[_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_]], 169)
-      kryo.register(classOf[Tuple19[_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_]], 170)
-      kryo.register(classOf[Tuple20[_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_]], 171)
-      kryo.register(classOf[Tuple21[_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_]], 172)
-      kryo.register(classOf[Tuple22[_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_]], 173)
+      kryo.register(classOf[Tuple2[_, _]], 153)
+      kryo.register(classOf[Tuple3[_, _, _]], 154)
+      kryo.register(classOf[Tuple4[_, _, _, _]], 155)
+      kryo.register(classOf[Tuple5[_, _, _, _, _]], 156)
+      kryo.register(classOf[Tuple6[_, _, _, _, _, _]], 157)
+      kryo.register(classOf[Tuple7[_, _, _, _, _, _, _]], 158)
+      kryo.register(classOf[Tuple8[_, _, _, _, _, _, _, _]], 159)
+      kryo.register(classOf[Tuple9[_, _, _, _, _, _, _, _, _]], 160)
+      kryo.register(classOf[Tuple10[_, _, _, _, _, _, _, _, _, _]], 161)
+      kryo.register(classOf[Tuple11[_, _, _, _, _, _, _, _, _, _, _]], 162)
+      kryo.register(classOf[Tuple12[_, _, _, _, _, _, _, _, _, _, _, _]], 163)
+      kryo.register(classOf[Tuple13[_, _, _, _, _, _, _, _, _, _, _, _, _]], 164)
+      kryo.register(classOf[Tuple14[_, _, _, _, _, _, _, _, _, _, _, _, _, _]], 165)
+      kryo.register(classOf[Tuple15[_, _, _, _, _, _, _, _, _, _, _, _, _, _, _]], 166)
+      kryo.register(classOf[Tuple16[_, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _]], 167)
+      kryo.register(classOf[Tuple17[_, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _]], 168)
+      kryo.register(classOf[Tuple18[_, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _]], 169)
+      kryo.register(classOf[Tuple19[_, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _]], 170)
+      kryo.register(classOf[Tuple20[_, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _]], 171)
+      kryo.register(classOf[Tuple21[_, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _]], 172)
+      kryo.register(classOf[Tuple22[_, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _]], 173)
 
       var regId: Int = 200
       if (kryoMoudleClassMap != null && !kryoMoudleClassMap.isEmpty()) {
         kryoMoudleClassMap.foreach(x => {
           x._2.foreach(i => {
-            logger.info(s"Regist class of ${i.getName()} to kryo[$regId]. ")
             kryo.register(i, regId)
             regId = regId + 1
           })
@@ -154,8 +151,7 @@ object KryoUtil {
         * 自定义注册，id 必须是10000以后的
         */
       kryoCustomClassRegMap.foreach(x => {
-        logger.info(s"Regist class of ${x._2.getName()} to kryo[${x._1}]. ")
-        kryo.register(x._2,x._1)
+        kryo.register(x._2, x._1)
       })
 
       kryo
@@ -189,7 +185,7 @@ object KryoUtil {
     try {
       byteArrayOutputStream = new ByteArrayOutputStream()
       output = new Output(byteArrayOutputStream)
-      val kryo = getInstance
+      val kryo = getInstance()
       kryo.writeClassAndObject(output, obj)
       output.flush()
       byteArrayOutputStream.toByteArray()
@@ -283,7 +279,7 @@ object KryoUtil {
     try {
       byteArrayOutputStream = new ByteArrayOutputStream
       output = new Output(byteArrayOutputStream)
-      val kryo = getInstance
+      val kryo = getInstance()
       kryo.writeObject(output, obj)
       output.flush()
       byteArrayOutputStream.toByteArray
@@ -331,7 +327,7 @@ object KryoUtil {
     try {
       byteArrayInputStream = new ByteArrayInputStream(byteArray)
       input = new Input(byteArrayInputStream)
-      val kryo = getInstance
+      val kryo = getInstance()
       kryo.readObject(input, clazz)
     } finally {
       if (byteArrayInputStream != null) {
@@ -359,5 +355,10 @@ object KryoUtil {
       case e: UnsupportedEncodingException =>
         throw new IllegalStateException(e)
     }
+  }
+
+  def register[T](clazz: Class[T]) = {
+    val kryo = getInstance()
+    kryo.register(clazz)
   }
 }

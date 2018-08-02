@@ -17,9 +17,10 @@ class FilesystemUsageStats {
     * freeKb:
     * usedPerc: %
     */
-  @BeanProperty var statsResult: Map[String, (String, String, Double, Double, Float)] = _
+  // fsname -> mountPoint,usedKb,freeKb,userPerc%
+  @BeanProperty var statsResult: java.util.Map[String, (String, Double, Double, Float)] = _
 
-  override def toString = s"FilesystemUsageStats(targetId=$targetId, snapId=$snapId, statsResult=$statsResult)"
+  override def toString = s"FilesystemUsageStats(targetId=$targetId, snapId=$snapId, statsResult=${statsResult.toString()})"
 }
 
 

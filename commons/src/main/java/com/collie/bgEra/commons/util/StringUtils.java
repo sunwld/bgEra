@@ -2,6 +2,7 @@ package com.collie.bgEra.commons.util;
 
 import org.apache.commons.text.StringEscapeUtils;
 import org.apache.log4j.Logger;
+
 import java.util.List;
 
 public class StringUtils {
@@ -15,7 +16,7 @@ public class StringUtils {
             return Integer.parseInt(s);
         } catch (Exception e) {
             logger.warn("StringUtils parse number failed:" + s, e);
-            return null;
+            return 0;
         }
     }
 
@@ -24,7 +25,7 @@ public class StringUtils {
             return Float.parseFloat(s);
         } catch (Exception e) {
             logger.warn("StringUtils parse number failed:" + s, e);
-            return null;
+            return 0F;
         }
     }
 
@@ -33,7 +34,7 @@ public class StringUtils {
             return Double.parseDouble(s);
         } catch (Exception e) {
             logger.warn("StringUtils parse number failed:" + s, e);
-            return null;
+            return 0D;
         }
     }
 
@@ -42,7 +43,7 @@ public class StringUtils {
             return Long.parseLong(s);
         } catch (Exception e) {
             logger.warn("StringUtils parse number failed:" + s, e);
-            return null;
+            return 0L;
         }
     }
 

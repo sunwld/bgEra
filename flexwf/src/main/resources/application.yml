@@ -1,0 +1,13 @@
+server:
+  port: 9008
+spring:
+  application:
+    name: flexwf
+  datasource:
+    driverClassName: com.mysql.cj.jdbc.Driver
+    username: flexwf
+    password: 1234yjd
+    url: jdbc:mysql://133.96.6.1:3306/flexwf?characterEncoding=utf-8&useSSL=false
+    initialSize: 30
+    minIdle: 30
+    maxActive: 300

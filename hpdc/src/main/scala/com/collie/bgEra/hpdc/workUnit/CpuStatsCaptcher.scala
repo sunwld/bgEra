@@ -6,8 +6,11 @@ import java.util.Properties
 import com.collie.bgEra.cloudApp.dtsf.{ResourceManager, WorkUnitRunable}
 import com.collie.bgEra.cloudApp.dtsf.bean.WorkUnitInfo
 import com.collie.bgEra.cloudApp.ssh2Pool.{Ssh2Session, SshResult}
-import com.collie.bgEra.commons.util.SerialNumberUtils
-import com.collie.bgEra.hpdc.workUnit.bean.CpuStats
+import com.collie.bgEra.commons.util.{SerialNumberUtils, StringUtils}
+import com.collie.bgEra.hpdc.context.KafkaProducerSource
+import com.collie.bgEra.hpdc.service.ShhShellMessgesService
+import com.collie.bgEra.hpdc.service.bean.ShellInfo
+import com.collie.bgEra.hpdc.workUnit.bean.{CpuProcessorStats, CpuStats}
 import org.apache.kafka.clients.producer.{KafkaProducer, ProducerRecord}
 import org.slf4j.{Logger, LoggerFactory}
 import org.springframework.beans.factory.annotation.{Autowired, Qualifier}
@@ -15,67 +18,62 @@ import org.springframework.stereotype.Component
 
 import scala.util.control.Breaks._
 import scala.collection.JavaConversions._
+import scala.collection.mutable
 import scala.util.control.Breaks.breakable
 
 @Component("cpuStatsCaptcher")
-class CpuStatsCaptcher extends WorkUnitRunable{
+class CpuStatsCaptcher extends WorkUnitRunable {
   private val TOPIC = "hpdc-cpusum"
-  private val SHELL = "CPU"
+  private val SHELL = "CPU.xsh"
   private val logger: Logger = LoggerFactory.getLogger("hpdc")
 
   @Autowired
-  @Qualifier("hostShellMap")
-  private val shellMap: java.util.Map[String,String] = null
-
-  @Autowired
-  private val kfkProducer: KafkaProducer[String, Object] = null
-
-  @Autowired
-  private val resManager: ResourceManager = null
+  private val shhShellMessgesService: ShhShellMessgesService = null
 
   override def runWork(unit: WorkUnitInfo): Unit = {
-    val cmd = shellMap.get("CPU.xsh")
-    var session: Ssh2Session = null
-    var sshResult: SshResult = null
-    try {
-      session = resManager.getHostSshConnPoolResource(unit.getTargetId())
-      sshResult = session.execCommand(cmd)
-      if(sshResult.isFinishAndCmdSuccess()){
-        val cpu = new CpuStats()
-        val record: ProducerRecord[String,Object] = new ProducerRecord(TOPIC,unit.targetId,cpu)
-        cpu.targetId = unit.targetId
-        cpu.snapId = SerialNumberUtils.getSerialByTrunc10s(unit.thisTime,true)
 
-        /**
-          * USRP=0.02
-          * SYSP=0.04
-          * WAITP=0.00
-          * IDLEP=99.94
-          */
-        val lines: util.List[String] = sshResult.getStrout()
-        lines.foreach(line => {
-          breakable {
-            val lineItems = line.split("=")
-            if(lineItems.length < 2){
-              break
-            }
-            lineItems(0) match {
-              case "USRP" => cpu.user = lineItems(1).toFloat
-              case "SYSP" => cpu.sys = lineItems(1).toFloat
-              case "WAITP" => cpu.cpuWait = lineItems(1).toFloat
-              case "IDLEP" => cpu.idle = lineItems(1).toFloat
-            }
+    try {
+      val sshResult = shhShellMessgesService.loadShellResults(new ShellInfo(SHELL, unit.targetId, mutable.Map()))
+      if (sshResult == null || sshResult.isEmpty) {
+        return
+      }
+
+      val cpu = new CpuStats()
+      cpu.targetId = unit.targetId
+      cpu.snapId = SerialNumberUtils.getSerialByTrunc10s(unit.thisTime, true)
+
+      /**
+        * USRP=0.02
+        * SYSP=0.04
+        * WAITP=0.00
+        * IDLEP=99.94
+        */
+      val lines: util.List[String] = sshResult
+      var user, sys, ioWait, idle: Float = 0F
+      lines.foreach(line => {
+        breakable {
+          val lineItems = line.split("=")
+          if (lineItems.length < 2) {
+            break
           }
-        })
-        kfkProducer.send(record)
-      }
+          lineItems(0) match {
+            case "USRP" => user = StringUtils.toFloat(lineItems(1))
+            case "SYSP" => sys = StringUtils.toFloat(lineItems(1))
+            case "WAITP" => ioWait = StringUtils.toFloat(lineItems(1))
+            case "IDLEP" => idle = StringUtils.toFloat(lineItems(1))
+          }
+        }
+      })
+      cpu.statsResult = (user, sys, ioWait, idle)
+
+      logger.debug(s"cpuStatsCaptcher:${cpu.toString()}")
+
+      val record: ProducerRecord[String, CpuStats] = new ProducerRecord(TOPIC, unit.targetId, cpu)
+      shhShellMessgesService.sendRecord2Kafka(record, classOf[CpuStats])
+
     } catch {
-      case e:Exception => {
-        logger.warn(s"Captcher cpusum failed, shell result[${sshResult}]",e)
-      }
-    }finally{
-      if(session != null){
-        session.close()
+      case e: Exception => {
+        logger.warn(s"Captcher cpusum failed.", e)
       }
     }
 
